@@ -1,0 +1,120 @@
+/* Global styles for toast notifications */
+.Vue-Toastification__toast {
+    font-size: 10px !important; /* Reduce font size */
+    /* border-radius: 4px !important; */
+    max-width: 300px !important; /* Restrict the width */
+    /* padding: 0px 0px !important; */
+}
+.Vue-Toastification__toast-body{
+    font-size:12px !important;
+    line-height: 15px !important;
+    font-family: 'Kodchasan' !important;
+}
+
+/* Customize success toasts */
+.Vue-Toastification__toast--success {
+    background-color: #d4edda; /* Light green background */
+    color: #155724; /* Dark green text */
+    letter-spacing: 0.7px;
+}
+
+/* Customize error toasts */
+.Vue-Toastification__toast--error {
+    background-color: #f8d7da; /* Light red background */
+    color: #721c24; /* Dark red text */
+}
+
+/* Customize progress bar */
+.Toastify__progress-bar {
+    height: 3px; /* Reduce progress bar height */
+}
+
+/* Customize toast icons */
+.Vue-Toastification__toast-icon {
+    width: 20px; /* Adjust icon width */
+    height: 20px; /* Adjust icon height */
+}
+.custom-toast {
+    font-size: 12px;
+    padding: 8px;
+    max-width: 250px;
+    border-radius: 6px;
+}
+
+/* Smaller toast style */
+.small-toast {
+    font-size: 12px;
+    padding: 8px;
+    max-width: 250px;
+    border-radius: 6px;
+}
+
+
+.text-danger {
+    color: red !important;
+    letter-spacing: 1px;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.swal2-container {
+    z-index: 1050 !important; /* Ensure modal is above all elements */
+}
+
+.logout-popup {
+    font-family: "Inter", sans-serif;
+    border-radius: 8px;
+    padding: 20px;
+    width: 400px;
+    max-width: 90%;
+}
+
+.swal2-title {
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.card{
+    background-color: rgba(248, 246, 242, .3);
+}
+
+.swal2-button {
+    padding: 10px 20px;
+}
+
+/* Confirm Button (Yes, log me out!) */
+.btn-danger {
+    background-color: #dc3545; /* Red color */
+    color: white; 
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333; /* Darker red on hover */
+}
+
+/* Cancel Button */
+.btn-secondary {
+    background-color: #6c757d; /* Gray color */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268; /* Darker gray on hover */
+}
+
+/* Adjusting button spacing */
+.swal2-actions {
+    gap: 10px; /* Adds spacing between buttons */
+}

@@ -1,0 +1,63 @@
+
+body,
+html {
+    height: 100%;
+    /* Ensure the body takes the full height */
+    margin: 0;
+    /* Remove default margin */
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    /* Center horizontally */
+    align-items: center;
+    /* Center vertically */
+    height: 100vh;
+    /* Full viewport height */
+}
+
+.center-div {
+    width: 100%;
+    /* Full width on small screens */
+    padding: 20px;
+    color: white;
+    /* Text color */
+    border-radius: 8px;
+    /* Rounded corners */
+    /* text-align: center; */
+    /* Center text */
+    /* box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Optional shadow for better appearance */
+    box-shadow: -1px 13px 30px 0px rgba(93, 125, 135, 0.78);
+    -webkit-box-shadow: -1px 13px 30px 0px rgba(93, 125, 135, 0.78);
+    -moz-box-shadow: -1px 13px 30px 0px rgba(93, 125, 135, 0.78);
+}
+
+@media (min-width: 768px) {
+    .center-div {
+        max-width: 60%;
+        /* Maximum width of 25% on larger screens */
+    }
+}
+
+@media (min-width: 1000px) {
+    .center-div {
+        max-width: 50%;
+        /* Maximum width of 25% on larger screens */
+    }
+}
+@media (min-width: 1200px) {
+    .center-div {
+        max-width: 40%;
+        /* Maximum width of 25% on larger screens */
+    }
+}
+
+.fv-row .error-message {
+    font-family: 'Kodchasan';
+    color: #e74c3c !important; /* Red color for error messages */
+    font-size: 1rem; /* Slightly smaller font size */
+    margin-top: 5px; /* Space between input and error message */
+    display: block; /* Make sure it's displayed as a block below the input */
+    font-weight: 600; /* Medium weight to stand out */
+}
