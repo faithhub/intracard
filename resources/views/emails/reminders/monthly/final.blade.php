@@ -1,7 +1,7 @@
 @extends('emails.layouts.reminder')
 
 @section('content')
-<p>Dear {{ $user->first_name }},</p>
+<p>Dear {{ $user->first_name }},</p>{{$schedule2}}
 
 <p>This is a final courtesy reminder that your {{ $paymentType }} payment of <strong>${{ $amount }}</strong> is due in Two days, <strong>{{ $dueDate }}</strong>.</p>
 

@@ -367,6 +367,60 @@ class PaymentSchedule extends Model
     
         return $reminders;
     }
+
+    // Add this to PaymentSchedule model
+public function verifyReminders()
+{
+    $reminderDates = json_decode($this->reminder_dates, true);
+    $today = Carbon::now()->startOfDay();
+    $issues = [];
+    
+    if (empty($reminderDates)) {
+        return ["No reminder dates found for this schedule"];
+    }
+
+    foreach ($reminderDates as $paymentDate => $reminders) {
+        // Skip empty reminder arrays
+        if (empty($reminders)) {
+            continue;
+        }
+
+        try {
+            $paymentCarbon = Carbon::parse($paymentDate);
+            
+            foreach ($reminders as $reminderType => $reminderDate) {
+                // Validate reminder date format
+                try {
+                    $reminderCarbon = Carbon::parse($reminderDate);
+                } catch (\Exception $e) {
+                    $issues[] = "Invalid reminder date format for {$paymentDate}: {$reminderDate}";
+                    continue;
+                }
+                
+                // Verify reminder is before payment date
+                if ($reminderCarbon->gte($paymentCarbon)) {
+                    $issues[] = "For payment {$paymentDate}: Reminder date {$reminderDate} is not before payment date";
+                }
+                
+                // Extract number of days from reminder type
+                if (preg_match('/(\d+)_days_before/', $reminderType, $matches)) {
+                    $expectedDays = (int)$matches[1];
+                    $actualDays = $paymentCarbon->diffInDays($reminderCarbon);
+                    
+                    if ($actualDays !== $expectedDays) {
+                        $issues[] = "For payment {$paymentDate}: Expected {$expectedDays} days before payment, but got {$actualDays} days";
+                    }
+                } else {
+                    $issues[] = "Invalid reminder type format: {$reminderType}";
+                }
+            }
+        } catch (\Exception $e) {
+            $issues[] = "Error processing payment date {$paymentDate}: " . $e->getMessage();
+        }
+    }
+    
+    return $issues;
+}
     /**
      * Get the user that owns the payment schedule.
      */

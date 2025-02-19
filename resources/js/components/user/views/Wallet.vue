@@ -48,7 +48,7 @@
                                                     <v-list-item-title class="d-flex justify-space-between">
                                                         <span>Total Transactions</span>
                                                         <span class="font-weight-bold">{{ quickStats.totalTransactions
-                                                            }}</span>
+                                                        }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
 
@@ -65,7 +65,7 @@
                                                         <span>Total Charges</span>
                                                         <span class="font-weight-bold">{{
                                                             formatAmount(quickStats.totalCharges)
-                                                            }}</span>
+                                                        }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
 
@@ -74,7 +74,7 @@
                                                         <span>Total Allocated</span>
                                                         <span class="font-weight-bold">{{
                                                             formatAmount(quickStats.totalAllocated)
-                                                            }}</span>
+                                                        }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
 
@@ -83,7 +83,7 @@
                                                         <span>Available Balance</span>
                                                         <span class="font-weight-bold">{{
                                                             formatAmount(quickStats.availableBalance)
-                                                            }}</span>
+                                                        }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
                                             </v-list>
@@ -219,7 +219,7 @@
                                     <span class="font-weight-bold me-2">Type:</span>
                                 </template>
                                 <v-list-item-title>{{ capitalizeFirstLetter(selectedTransaction.type)
-                                    }}</v-list-item-title>
+                                }}</v-list-item-title>
                             </v-list-item>
 
                             <v-list-item>
@@ -227,7 +227,7 @@
                                     <span class="font-weight-bold me-2">Status:</span>
                                 </template>
                                 <v-list-item-title>{{ capitalizeFirstLetter(selectedTransaction.status)
-                                    }}</v-list-item-title>
+                                }}</v-list-item-title>
                             </v-list-item>
 
                             <v-list-item>
@@ -275,7 +275,7 @@
                                 <div class="d-flex justify-space-between mb-1">
                                     <span class="text-body-2">Amount:</span>
                                     <span class="text-body-2">{{ formatToCAD(parseFloat(fundWallet.amount).toFixed(2))
-                                        }}</span>
+                                    }}</span>
                                 </div>
                                 <div class="d-flex justify-space-between mb-1">
                                     <span class="text-body-2">Charges (5%):</span>
@@ -285,7 +285,7 @@
                                 <div class="d-flex justify-space-between">
                                     <span class="text-body-1 font-weight-bold">Total:</span>
                                     <span class="text-body-1 font-weight-bold">{{ formatToCAD(totalAmount.toFixed(2))
-                                        }}</span>
+                                    }}</span>
                                 </div>
                             </div>
 
@@ -298,31 +298,22 @@
                                 </template>
                             </v-select> -->
 
-                            <v-select
-    v-model="fundWallet.service"
-    :items="billTypes"
-    item-title="name"
-    item-value="id"
-    label="Select Service"
-    outlined
-    dense
-    required
-    :error-messages="fundWalletErrors.service"
-    @update:model-value="clearError('service')">
-    <template v-slot:item="{ props, item }">
-        <v-list-item
-            v-bind="props"
-            :disabled="!item.raw.is_setup"
-            :class="{'text-grey': !item.raw.is_setup}">
-            <v-list-item-title>
-                <!-- {{ item.raw.name }} -->
-                <span v-if="!item.raw.is_setup" class="text-caption text-grey-darken-1 ms-2">
-                    (Not set up)
-                </span>
-            </v-list-item-title>
-        </v-list-item>
-    </template>
-</v-select>
+                            <v-select v-model="fundWallet.service" :items="billTypes" item-title="name" item-value="id"
+                                label="Select Service" outlined dense required
+                                :error-messages="fundWalletErrors.service" @update:model-value="clearError('service')">
+                                <template v-slot:item="{ props, item }">
+                                    <v-list-item v-bind="props" :disabled="!item.raw.is_setup"
+                                        :class="{ 'text-grey': !item.raw.is_setup }">
+                                        <v-list-item-title>
+                                            <!-- {{ item.raw.name }} -->
+                                            <span v-if="!item.raw.is_setup"
+                                                class="text-caption text-grey-darken-1 ms-2">
+                                                (Not set up)
+                                            </span>
+                                        </v-list-item-title>
+                                    </v-list-item>
+                                </template>
+                            </v-select>
                             <!-- Payment Card Selection -->
                             <!-- <v-divider class="my-4"></v-divider> -->
                             <h5 class="mb-3 mt-5" style="font-size: 13px;">Select Payment Card</h5>
@@ -763,21 +754,21 @@ export default {
         },
         // Fetch wallet data
         async fetchWalletData() {
-  try {
-    this.isSkeletonLoading = true;
-    const response = await axios.get('/api/wallet');
-    if (response.data?.success) {
-      const { wallet_balance, transactions, allocations } = response.data.data;
-      this.walletBalance = wallet_balance;
-      this.transactions = transactions || [];
-      this.updateChartData(allocations);
-    }
-  } catch (error) {
-    useToast().error(error.response?.data?.message || 'Failed to fetch wallet data');
-  } finally {
-    this.isSkeletonLoading = false;
-  }
-},
+            try {
+                this.isSkeletonLoading = true;
+                const response = await axios.get('/api/wallet');
+                if (response.data?.success) {
+                    const { wallet_balance, transactions, allocations } = response.data.data;
+                    this.walletBalance = wallet_balance;
+                    this.transactions = transactions || [];
+                    this.updateChartData(allocations);
+                }
+            } catch (error) {
+                useToast().error(error.response?.data?.message || 'Failed to fetch wallet data');
+            } finally {
+                this.isSkeletonLoading = false;
+            }
+        },
 
         getWalletBreakdownByService() {
             const breakdown = {};

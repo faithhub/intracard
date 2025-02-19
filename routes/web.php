@@ -36,7 +36,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('auth/status', function () {
     return response()->json([
         'authenticated' => auth()->check(),
-        'user' => auth()->user(),
+        'user'          => auth()->user(),
     ]);
 });
 
@@ -196,7 +196,7 @@ Route::prefix('admin/notifications')->middleware(['auth:admin'])->group(function
 
 Route::prefix('admin')
     ->middleware('admin.guest') // Apply the admin guest middleware
-    ->as('admin.') // Automatically prefix 'admin.' to route names
+    ->as('admin.')              // Automatically prefix 'admin.' to route names
     ->group(function () {
 
         // Sign In routes
@@ -226,20 +226,27 @@ Route::prefix('admin')
         });
 
         Route::resource('/admin-users', AdminController::class)->names([
-            'index' => 'admin-users.index',
-            'create' => 'admin-users.create',
-            'store' => 'admin-users.store',
-            'show' => 'admin-users.show',
-            'edit' => 'admin-users.edit',
-            'update' => 'admin-users.update',
+            'index'   => 'admin-users.index',
+            'create'  => 'admin-users.create',
+            'store'   => 'admin-users.store',
+            'show'    => 'admin-users.show',
+            'edit'    => 'admin-users.edit',
+            'update'  => 'admin-users.update',
             'destroy' => 'admin-users.destroy',
         ]);;
+
         // Protected routes
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout-admin');
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [UserController::class, 'index'])->name('users');
+        Route::delete('/user/{uuid}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('/user-list', [UserController::class, 'getUsers'])->name('users.list');
         Route::get('/user/{uuid}', [UserController::class, 'viewUser'])->name('users.view');
+
+        Route::post('/users/{uuid}/approve', [UserController::class, 'approveUser'])->name('admin.users.approve');
+        Route::post('/users/{uuid}/reject', [UserController::class, 'rejectUser'])->name('admin.users.reject');
+        Route::delete('/users/{uuid}/delete', [UserController::class, 'deleteUser'])->name('admin.users.delete');
+
         Route::get('/test', [AdminDashboardController::class, 'test'])->name('test');
         Route::get('/profile', [AdminDashboardController::class, 'profile'])->name('profile');
         Route::get('/support', [AdminDashboardController::class, 'help'])->name('support');
@@ -287,7 +294,6 @@ Route::prefix('admin')
 // Route::post('/api/team/members/verify-token', [TeamMemberController::class, 'verifyInvitationToken']);
 // Route::post('/api/team/members/complete-invitation', [TeamMemberController::class, 'completeInvitation']);
 
-
 // For handling email links
 Route::post('/api/team/members/decline/{token}', [TeamMemberController::class, 'declineInvite'])->name('team.invitation.decline');
 Route::post('/api/team/invitation/{token}/decline', [TeamMemberController::class, 'declineInvitation']);
@@ -300,22 +306,21 @@ Route::post('/api/team/invitation/{token}/accept', [TeamMemberController::class,
 Route::post('/api/phone/send-code', [PhoneVerificationController::class, 'sendCode']);
 Route::post('/api/phone/verify-code', [PhoneVerificationController::class, 'verifyCode']);
 
-
 Route::middleware(['checkLaravelAuth'])->group(function () {
     Route::get('api/ping', function (Request $request) {
         return response()->json([
             // 'auth_user' => Auth::user(),
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Session active',
         ], 200);
     });
 
     Route::get('/api/geocode', function (Request $request) {
-        $query = $request->query('query');
+        $query    = $request->query('query');
         $response = Http::get("https://api.mapbox.com/geocoding/v5/mapbox.places/{$query}.json", [
             'access_token' => env('MAPBOX_TOKEN'),
-            'country' => 'CA',
-            'autocomplete' => true
+            'country'      => 'CA',
+            'autocomplete' => true,
         ]);
         return $response->json();
     });
@@ -351,7 +356,6 @@ Route::middleware(['checkLaravelAuth'])->group(function () {
         Route::get('/search', [NotificationController::class, 'search'])->name('notifications.search');
         Route::delete('/{id}', [NotificationController::class, 'delete'])->name('notifications.delete');
     });
-
 
     Route::post('/api/cards', [BillingController::class, 'store']);
     Route::post('/api/cards/{cardId}/delete', [BillingController::class, 'deleteCard']);

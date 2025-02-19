@@ -194,32 +194,40 @@
                                     <td>
                                         <div class="badge badge-light-warning fw-bold">Pending</div>
                                     </td>
-                                    <td>{{ $user->created_at->format('d M Y, h:i A') }}</td>
-                                    <td class="text-end">
-                                        <a href="#" class="btn btn-flex btn-center btn-sm" data-kt-menu-trigger="click"
-                                            data-kt-menu-placement="bottom-end">
+                                    <td>{{ $user->created_at->format('d M Y, h:i A') }}</td><td class="text-end">
+                                        <a href="#" class="btn btn-light btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
                                             Actions
                                             <i class="fa fa-chevron-down fs-5 ms-1"></i>
                                         </a>
+                                        
                                         <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4"
                                             data-kt-menu="true">
-                                            <div class="menu-link btn">
-                                                <a href="{{ route('admin.users.view', $user->uuid) }}"
-                                                    class="menu-link px-3">
+                                            <!--begin::Menu item-->
+                                            <div class="menu-item px-3">
+                                                <a href="{{ route('admin.users.view', $user->uuid) }}" class="menu-link px-3">
                                                     View
                                                 </a>
                                             </div>
-                                            <div class="menu-link px-3 btn">
-                                                <form action="" method="POST" style="display: inline;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="menu-link px-3"
-                                                        onclick="return confirm('Are you sure you want to delete this user?')">
-                                                        Delete
-                                                    </button>
-                                                </form>
+                                            <!--end::Menu item-->
+                                    
+                                            <!--begin::Menu item-->
+                                            <div class="menu-item px-3">
+                                                <button type="button" class="menu-link px-3" style="border:0; background:none; width:100%; text-align:left;"
+                                                    onclick="confirmDelete('{{ $user->uuid }}', '{{ $user->first_name }} {{ $user->last_name }}')">
+                                                    Delete
+                                                </button>
                                             </div>
+                                            <!--end::Menu item-->
                                         </div>
+                                    
+                                        <!-- Hidden Delete Form -->
+                                        <form id="delete-form-{{ $user->uuid }}" 
+                                              action="{{ route('admin.users.destroy', $user->uuid) }}" 
+                                              method="POST" 
+                                              class="d-none">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
                                     </td>
                                 </tr>
                             @endforeach
@@ -234,7 +242,89 @@
         </div>
     </div>
 
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user: <strong id="userName"></strong>?</p>
+                <p class="mb-0 text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+ <!-- jQuery -->
+ <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+ <!-- DataTables JS -->
+ <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+
+ <!-- Include DataTables Bootstrap CSS -->
+ <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
+
+ <!-- Include DataTables Bootstrap JS -->
+ <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+
+ <!-- DataTables CSS -->
+ <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css">
+
+
+
     <script>
+        let deleteForm;
+let deleteModal;
+let confirmDeleteBtn;
+let deleteSpinner;
+
+document.addEventListener('DOMContentLoaded', function() {
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    deleteSpinner = confirmDeleteBtn.querySelector('.spinner-border');
+});
+
+function confirmDelete(uuid, name) {
+    // Set the user name in the modal
+    document.getElementById('userName').textContent = name;
+    
+    // Store the form reference
+    deleteForm = document.getElementById('delete-form-' + uuid);
+    
+    // Show the modal
+    deleteModal.show();
+    
+    // Add click event to confirm button
+    confirmDeleteBtn.addEventListener('click', submitDelete);
+}
+
+function submitDelete() {
+    // Show spinner and disable button
+    deleteSpinner.classList.remove('d-none');
+    confirmDeleteBtn.disabled = true;
+    
+    // Submit the form
+    deleteForm.submit();
+}
+
+// Reset modal state when hidden
+document.getElementById('deleteModal').addEventListener('hidden.bs.modal', function () {
+    deleteSpinner.classList.add('d-none');
+    confirmDeleteBtn.disabled = false;
+    confirmDeleteBtn.removeEventListener('click', submitDelete);
+});
+
         document.addEventListener('DOMContentLoaded', function() {
             const exportForm = document.getElementById('kt_modal_export_users_form');
             const exportButton = exportForm.querySelector('button[type="submit"]');
@@ -412,4 +502,24 @@
             updateAccountTypeOptions(accountGoalSelect.value);
         });
     </script>
+
+<style>
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+    }
+    
+    .dropdown-item:active {
+        color: inherit;
+    }
+    
+    .dropdown-item.text-danger:hover {
+        background-color: #fff5f5;
+    }
+    
+    .modal-header .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+    </style>
 @endsection

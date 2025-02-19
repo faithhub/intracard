@@ -84,6 +84,10 @@ class PaymentScheduleController extends Controller
     public function index()
     {
         $user = auth()->user();
+        // $PS = PaymentSchedule::where('user_id', $user->id)->get();
+        // // dd($PS);
+        
+        // return response()->json($PS);
 
         if ($user->is_team) {
             $teamMember = TeamMember::where([
