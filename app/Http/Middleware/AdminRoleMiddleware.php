@@ -25,7 +25,7 @@ class AdminRoleMiddleware
         }
 
         // Check if admin is a super admin
-        if ($admin->hasRole('super_admin')) {
+        if ($admin->hasRole('system_admin')) {
             return $next($request);
         }
 

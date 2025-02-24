@@ -116,6 +116,11 @@
             /* Custom info color (blue) */
             color: #fff !important;
         }
+
+        .badge-light-primary{
+            background-color: #a000f947 !important;
+    color: #210035 !important;
+        }
     </style>
     <!-- Optional: SweetAlert script -->
 </head>
@@ -124,6 +129,54 @@
 <body id="kt_app_body" data-kt-app-layout="light-sidebar" data-kt-app-sidebar-enabled="true"
     data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true"
     data-kt-app-sidebar-push-footer="true" class="safari-mode app-default">
+
+     <!-- Toast Container -->
+     <div id="toast-container" class="toast-container position-fixed top-0 end 0 p-3">
+        @if(Session::has('error'))
+        <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ Session::get('error') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        @endif
+
+        @if(Session::has('success'))
+        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ Session::get('success') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        @endif
+
+        @if(Session::has('warning'))
+        <div class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ Session::get('warning') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        @endif
+
+        @if(Session::has('info'))
+        <div class="toast align-items-center text-bg-info border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    {{ Session::get('info') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        @endif
+    </div>
+
 
     <!--begin::App-->
     <div class="d-flex flex-column flex-root app-root" id="kt_app_root">
@@ -174,7 +227,6 @@
         </div>
     </div>
 
-
     @include('admin.includes.logout')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
@@ -198,6 +250,46 @@
     <script src="{{ asset('assets/js/confirm.js') }}"></script>
     {{-- <script src="{{ asset('assets/js/custom/pages/user-profile/general.js') }}"></script> --}}
     {{-- <script src="{{ asset('assets/js/widgets.bundle.js') }}"></script> --}}
+
+    <!-- Move this script after jQuery and before the closing body tag -->
+<script>
+    $(document).ready(function() {
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",  // This ensures top-right positioning
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
+        // Handle session messages
+        @if(Session::has('error'))
+            toastr.error("{{ Session::get('error') }}", "Error");
+        @endif
+
+        @if(Session::has('success'))
+            toastr.success("{{ Session::get('success') }}", "Success");
+        @endif
+
+        @if(Session::has('warning'))
+            toastr.warning("{{ Session::get('warning') }}", "Warning");
+        @endif
+
+        @if(Session::has('info'))
+            toastr.info("{{ Session::get('info') }}", "Information");
+        @endif
+    });
+</script>
 </body>
 
 </html>

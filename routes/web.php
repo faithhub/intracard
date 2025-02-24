@@ -206,78 +206,90 @@ Route::prefix('admin')
         // Add registration routes here if needed
     });
 
-Route::prefix('admin')
-    ->middleware(['admin.auth']) // Apply the admin auth middleware
+    Route::prefix('admin')
+    ->middleware(['admin.auth'])
     ->as('admin.')
     ->group(function () {
 
-        //Export
-        Route::get('/export', [ExportController::class, 'export'])->name('export');
-        // Route::get('/export/pdf', [ExportController::class, 'exportToPDF'])->name('export.pdf');
-
-        // Support-related routes
-        Route::middleware(['admin.role:support'])->group(function () {
-            // Route::get('/support', [SupportController::class, 'index'])->name('admin.support');
+        // Common Routes (accessible by all authenticated admins)
+        Route::middleware(['role:admin,support,system_admin,manager,finance,user_manager'])->group(function () {
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/profile', [AdminDashboardController::class, 'profile'])->name('profile');
+            Route::post('/logout', [AuthController::class, 'logout'])->name('logout-admin');
         });
 
-        // Another role example
-        Route::middleware(['admin.role:manager'])->group(function () {
-            // Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        // System Admin Routes
+        Route::middleware(['role:system_admin'])->group(function () {
+            // Admin Management
+            Route::get('/admin-users', [AdminController::class, 'index'])->name('admin-users.index');
+            Route::get('/admin-users/create', [AdminController::class, 'create'])->name('admin-users.create');
+            Route::post('/admin-users', [AdminController::class, 'store'])->name('admin-users.store');
+            Route::get('/admin-users/{id}', [AdminController::class, 'show'])->name('admin-users.show');
+            Route::get('/admin-users/{id}/edit', [AdminController::class, 'edit'])->name('admin-users.edit');
+            Route::post('/admin-users/update', [AdminController::class, 'update'])->name('admin-users.update');
+            Route::delete('/admin-users/{id}', [AdminController::class, 'destroy'])->name('admin-users.destroy');
+
+            // Settings
+            Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+
+            // Auto Reply Management
+            Route::resource('auto-replies', AutoReplyController::class);
+
+            // Export Functions
+            Route::get('/export', [ExportController::class, 'export'])->name('export');
+            Route::get('/export/pdf', [ExportController::class, 'exportToPDF'])->name('export.pdf');
         });
 
-        Route::resource('/admin-users', AdminController::class)->names([
-            'index'   => 'admin-users.index',
-            'create'  => 'admin-users.create',
-            'store'   => 'admin-users.store',
-            'show'    => 'admin-users.show',
-            'edit'    => 'admin-users.edit',
-            'update'  => 'admin-users.update',
-            'destroy' => 'admin-users.destroy',
-        ]);;
+        // Admin & System Admin Routes (User Management)
+        Route::middleware(['role:admin,system_admin,user_manager'])->group(function () {
+            Route::get('/users', [UserController::class, 'index'])->name('users');
+            Route::delete('/user/{uuid}', [UserController::class, 'destroy'])->name('users.destroy');
+            Route::get('/user-list', [UserController::class, 'getUsers'])->name('users.list');
+            Route::get('/user/{uuid}', [UserController::class, 'viewUser'])->name('users.view');
+            Route::post('/users/{uuid}/approve', [UserController::class, 'approveUser'])->name('admin.users.approve');
+            Route::post('/users/{uuid}/reject', [UserController::class, 'rejectUser'])->name('admin.users.reject');
+            Route::delete('/users/{uuid}/delete', [UserController::class, 'deleteUser'])->name('admin.users.delete');
+            Route::get('/onboarding', [AdminDashboardController::class, 'onboarding'])->name('onboarding');
+        });
 
-        // Protected routes
-        Route::post('/logout', [AuthController::class, 'logout'])->name('logout-admin');
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/users', [UserController::class, 'index'])->name('users');
-        Route::delete('/user/{uuid}', [UserController::class, 'destroy'])->name('users.destroy');
-        Route::get('/user-list', [UserController::class, 'getUsers'])->name('users.list');
-        Route::get('/user/{uuid}', [UserController::class, 'viewUser'])->name('users.view');
+        // Support & System Admin Routes
+        Route::middleware(['role:support,system_admin'])->group(function () {
+            Route::get('/support', [AdminDashboardController::class, 'help'])->name('support');
+        });
 
-        Route::post('/users/{uuid}/approve', [UserController::class, 'approveUser'])->name('admin.users.approve');
-        Route::post('/users/{uuid}/reject', [UserController::class, 'rejectUser'])->name('admin.users.reject');
-        Route::delete('/users/{uuid}/delete', [UserController::class, 'deleteUser'])->name('admin.users.delete');
+        // Finance & System Admin Routes
+        Route::middleware(['role:finance,system_admin'])->group(function () {
+            // Card Transactions
+            Route::get('/card-transactions', [TransactionController::class, 'card'])->name('transaction.card');
+            Route::get('/card-transactions/view/{uuid}', [TransactionController::class, 'card_transaction'])->name('card.transactions.view');
+            Route::get('/card-transactions/download/{uuid}', [TransactionController::class, 'card_download'])->name('card.transactions.download');
 
-        Route::get('/test', [AdminDashboardController::class, 'test'])->name('test');
-        Route::get('/profile', [AdminDashboardController::class, 'profile'])->name('profile');
-        Route::get('/support', [AdminDashboardController::class, 'help'])->name('support');
-        Route::get('/onboarding', [AdminDashboardController::class, 'onboarding'])->name('onboarding');
+            // Wallet Transactions
+            Route::get('/wallet-transactions', [TransactionController::class, 'wallet'])->name('wallet.transaction');
+            Route::get('/wallet-transactions/export', [TransactionController::class, 'wallet_export'])->name('wallet.transactions.export');
+            Route::get('/wallet-transactions/view/{uuid}', [TransactionController::class, 'wallet_view'])->name('wallet.transactions.view');
+            Route::get('/wallet-transactions/download/{uuid}', [TransactionController::class, 'wallet_download'])->name('wallet.transactions.download');
+        });
 
-        //Settings
-        Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+        // Reports Access (Finance, System Admin)
+        Route::middleware(['role:finance,system_admin'])->group(function () {
+            Route::get('/reports', [ReportController::class, 'index'])->name('report.index');
+            Route::post('/report-query-table', [ReportController::class, 'queryTable'])->name('report.queryTable');
+            Route::post('/report-export-table', [ReportController::class, 'exportData'])->name('report.exportData');
+            Route::post('/report-get-table-columns', [ReportController::class, 'getTableColumns'])->name('report.getTableColumns');
+            Route::get('/equifax-report', [ReportController::class, 'equifax'])->name('report.equifax');
+            Route::get('/transunion-report', [ReportController::class, 'transunion'])->name('report.transunion');
+        });
 
-        // Reports
-        Route::get('/reports', [ReportController::class, 'index'])->name('report.index');
-        Route::post('/report-query-table', [ReportController::class, 'queryTable'])->name('report.queryTable');
-        Route::post('/report-export-table', [ReportController::class, 'exportData'])->name('report.exportData');
-        Route::post('/report-get-table-columns', [ReportController::class, 'getTableColumns'])->name('report.getTableColumns');
-        Route::get('/equifax-report', [ReportController::class, 'equifax'])->name('report.equifax');
-        Route::get('/transunion-report', [ReportController::class, 'transunion'])->name('report.transunion');
+        // User Manager Routes
+        Route::middleware(['role:user_manager,system_admin'])->group(function () {
+            Route::get('/onboarding', [AdminDashboardController::class, 'onboarding'])->name('onboarding');
+        });
 
-        //Transaction
-        Route::get('/card-transactions', [TransactionController::class, 'card'])->name('transaction.card');
-        Route::get('/card-transactions/view/{uuid}', [TransactionController::class, 'card_transaction'])->name('card.transactions.view');
-        Route::get('/card-transactions/download/{uuid}', [TransactionController::class, 'card_download'])->name('card.transactions.download');
-
-        Route::get('/wallet-transactions', [TransactionController::class, 'wallet'])->name('wallet.transaction');
-
-        Route::get('/wallet-transactions/export', [TransactionController::class, 'wallet_export'])->name('wallet.transactions.export');
-
-        Route::get('/wallet-transactions/view/{uuid}', [TransactionController::class, 'wallet_view'])->name('wallet.transactions.view');
-
-        Route::get('/wallet-transactions/download/{uuid}', [TransactionController::class, 'wallet_download'])->name('wallet.transactions.download');
-
-        //AutoReply
-        Route::resource('auto-replies', AutoReplyController::class);
+        // Test Route (Development Only)
+        Route::middleware(['role:system_admin'])->group(function () {
+            Route::get('/test', [AdminDashboardController::class, 'test'])->name('test');
+        });
     });
 
 // Routes for OTP verification, excluding guest middleware but including CheckOtp middleware

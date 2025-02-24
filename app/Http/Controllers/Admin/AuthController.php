@@ -55,12 +55,14 @@ class AuthController extends Controller
             }
 
             // Optional: Ensure admin is active (if your `admins` table has an `is_active` field)
-            // if (isset($admin->is_active) && !$admin->is_active) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'Your account is inactive. Please contact support.',
-            //     ], 403); // 403 Forbidden
-            // }
+            if (isset($admin->status) && $admin->status != 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is inactive. Please contact support.',
+                ], 403); // 403 Forbidden
+            }
+            
+            // dd($admin);
 
             // Log in the admin
             Auth::guard('admin')->login($admin);

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminAuthMiddleware;
 use App\Http\Middleware\AdminRoleMiddleware;
+use App\Http\Middleware\CheckAdminRole;
 use App\Http\Middleware\CheckLaravelAuth;
 use App\Http\Middleware\CustomGuestMiddleware;
 use App\Http\Middleware\RedirectIfAuthenticatedAdmin;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'custom-guest' => CustomGuestMiddleware::class,
             'checkLaravelAuth' => CheckLaravelAuth::class,
             'admin.role' => AdminRoleMiddleware::class,
+            'role' => CheckAdminRole::class,
         ]);
         // $middleware->alias([
         //     'admin.auth' => AdminAuthMiddleware::class
