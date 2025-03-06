@@ -141,13 +141,13 @@ const routes = [
         path: "",
         name: "HomeRoot",
         component: () =>
-            import(/* webpackChunkName: "home" */ "@/components/home/LandingPage.vue"),
+            import(/* webpackChunkName: "auth" */ "@/components/auth/Login.vue"),
     },
     {
         path: "/home",
         name: "Home",
         component: () =>
-            import(/* webpackChunkName: "home" */ "@/components/home/LandingPage.vue"),
+            import(/* webpackChunkName: "auth" */ "@/components/auth/Login.vue"),
     },
     {
         path: "/auth/sign-in",
