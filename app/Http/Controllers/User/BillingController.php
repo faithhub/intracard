@@ -208,33 +208,6 @@ class BillingController extends Controller
         return 'unknown';
     }
 
-    public function billTypes2(): JsonResponse
-    {
-        // Get the authenticated user's account goal
-        $accountGoal = auth()->user()->account_goal;
-
-        // Get base bills query
-        $query = Bill::select('id', 'value', 'name');
-
-        // Filter bills based on account goal
-        if ($accountGoal === 'rent') {
-            // Include rent and all other bills except mortgage
-            $query->where(function ($q) {
-                $q->where('value', '!=', 'mortgage')
-                    ->orWhere('value', 'rent');
-            });
-        } elseif ($accountGoal === 'mortgage') {
-            // Include mortgage and all other bills except rent
-            $query->where(function ($q) {
-                $q->where('value', '!=', 'rent')
-                    ->orWhere('value', 'mortgage');
-            });
-        }
-
-        $bills = $query->get();
-
-        return response()->json($bills);
-    }
     public function billTypes(): JsonResponse
     {
         $user = auth()->user();
@@ -440,7 +413,7 @@ class BillingController extends Controller
             // Get the current authenticated user
             $user = Auth::user();
 
-            if (! $user) {
+            if (!$user) {
                 return response()->json([
                     'message' => 'Unauthorized: Please log in to continue',
                     // 'request' => $request->all(),
@@ -499,7 +472,6 @@ class BillingController extends Controller
 
             // Save the bill history
             $billHistory = BillHistory::create($validated);
-
                                                               // Save the recurring billing schedule
             $frequency    = $request->frequency ?? 'monthly'; // monthly or bi-weekly
             $dueDate      = Carbon::parse($request->due_date);
@@ -507,39 +479,29 @@ class BillingController extends Controller
             $endDate      = Carbon::now()->addYear(); // End 1 year from now
             $recurringDay = $dueDate->day;
 
-            $paymentSchedule = PaymentSchedule::create([
+            $teamId = null;
+            $paymentType = 'bill';
+            $amaount = $validated['amount'];
+            // Use both IDs for payment schedule creation
+            $scheduleParams = [
                 'user_id'         => $user->id,
-                                                           // 'payment_type' => $request->bill_type, // Use bill_type as payment_type
-                'payment_type'    => 'bill',               // Use bill_type as payment_type
-                'recurring_day'   => $recurringDay,        // Day of the month for monthly billing
-                'amount'          => $validated['amount'], // Include the amount
-                'bill_history_id' => $billHistory->id,     // Link to the bill history ID
+                'payment_type'    => $paymentType,
+                'recurring_day'   => (int) $recurringDay,
+                'amount'          => $amaount,
+                'bill_history_id' => $billHistory->id,
+                'address_id'      => null,
                 'duration_from'   => $startDate,
-                'duration_to'     => $endDate, // Default: 1 year of recurring billing
+                'duration_to'     => $endDate,
                 'status'          => 'active',
-                'frequency'       => $frequency, // Add frequency to PaymentSchedule
-                'reminder_dates'  => null,       // Initially null
-            ]);
+                'is_team_payment' => !is_null($teamId),
+                'team_id'         => $teamId,
+            ];
 
-            // Generate recurring dates and save reminders
-            // $recurringDates = $this->generateRecurringDates($dueDate, $frequency, now()->addYear());
-            // $recurringDates = $paymentSchedule->generateRecurringDates($startDate, $endDate, $recurringDay, $frequency);
+            // Save the payment schedule
+            $paymentSchedule = PaymentSchedule::create($scheduleParams);
 
-            // Generate reminders using the model method
-            $reminders = $paymentSchedule->generateReminders();
-
-            // Save the reminders in the database as JSON
-            $paymentSchedule->update(['reminder_dates' => json_encode($reminders)]);
-
-            // Queue email notifications for each reminder
-            foreach ($reminders as $paymentDate => $reminderDates) {
-                foreach ($reminderDates as $key => $date) {
-                    if (Carbon::parse($date)->isFuture()) {
-                        Notification::route('mail', $user->email)
-                            ->notify(new PaymentReminderNotification($paymentSchedule, $key));
-                    }
-                }
-            }
+            // Create reminders in the database
+            $createdReminders = $paymentSchedule->createReminders();
 
             // Commit the transaction
             DB::commit();
@@ -864,7 +826,7 @@ class BillingController extends Controller
                     'allocations'        => $allocations,
                     // 'transactions' => $transactions,
                     'wallet'             => $wallet,
-                    'transactions_table' => $transactions_table,
+                    'transactions' => $transactions_table,
                 ],
             ], 200);
         } catch (\Exception $e) {

@@ -18,6 +18,12 @@ class AdminAuthMiddleware
     {
         // Check if the user is authenticated as an admin
         if (!Auth::guard('admin')->check()) {
+            // Store the current URL before redirecting
+            if (!$request->is('admin/sign-in') && !$request->is('admin/logout')) {
+                $currentUrl = $request->fullUrl();
+                session()->put('admin_intended_url', $currentUrl);
+            }
+            
             // Redirect to the admin login page if not authenticated
             return redirect()->route('admin.login')->with('error', 'Please log in to access this page.');
         }

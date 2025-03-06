@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Auth;
 
 use App\DataSanitizer;
@@ -11,7 +10,6 @@ use App\Mail\TeamInvitationMail;
 use App\Models\Address;
 use App\Models\BuildCreditCard;
 use App\Models\LandlordFinancerDetail;
-use App\Models\Member;
 use App\Models\PaymentSchedule;
 use App\Models\Team;
 use App\Models\TeamMember;
@@ -20,7 +18,6 @@ use App\Models\Wallet;
 use App\Notifications\PaymentReminderNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -116,198 +113,46 @@ class RegisterController extends Controller
         return response()->json(['status' => 'success', 'message' => 'Email is available.'], 200);
     }
 
-    public function register2(Request $request)
+    private function sendTeamInvitationEmail($email, $name, $role, $addressName, $team, $user)
     {
+        // Generate invitation token and expiry date
+        $token      = Str::random(32);
+        $expiryDate = Carbon::now()->addDays(7);
 
-        // Validate user and address details (add specific rules as needed)
-        $validator = Validator::make($request->all(), [
-            'personalDetails.firstName' => 'required|string|max:50',
-            'personalDetails.lastName' => 'required|string|max:50',
-            'personalDetails.middleName' => 'nullable|string|max:50',
-            'personalDetails.email' => 'required|email|unique:users,email',
-            'personalDetails.phone' => 'required|string|max:15',
-            // Other accountType and address validation rules
-
-            // Validate Account Type Details
-            'accountType.goal' => 'required|string|in:rent,mortgage',
-            'accountType.plan' => 'nullable|string|in:pay_rent,pay_rent_build,pay_mortgage,pay_mortgage_build',
-            'accountType.applicationType' => 'nullable|string|in:sole_applicant,co_applicant,owner,co_owner',
-            'accountType.paymentSetup' => 'nullable|string|in:Continue_paying_existing_rent,Setup_payment_new_rental,Continue_paying_existing_mortgage,Setup_payment_new_mortgage',
-            'accountType.creditCardLimit' => 'nullable|numeric|min:100|max:500000',
-            'accountType.creditCardDueDate' => 'nullable|integer|min:1|max:31',
-
-            // Validate Primary Rent/Mortgage Amount (for Co-Applicants or Co-Owners)
-            'accountType.primaryRentOrMortgageAmount' => 'nullable|numeric|min:100|max:500000',
-
-            // Validate Co-Applicants (if any)
-            'accountType.coApplicants' => 'array',
-            'accountType.coApplicants.*.firstName' => 'required_with:accountType.coApplicants|string|max:50',
-            'accountType.coApplicants.*.lastName' => 'required_with:accountType.coApplicants|string|max:50',
-            'accountType.coApplicants.*.email' => 'required_with:accountType.coApplicants|email',
-            // 'accountType.coApplicants.*.mortgageAmount' => 'required_with:accountType.coApplicants|numeric|min:100|max:500000',
-
-            // Validate Landlord or Mortgage Finance Details
-            'landlordOrFinanceDetails.paymentMethod' => 'nullable|string|in:interac,cheque,EFT,ACH',
-            'landlordOrFinanceDetails.email' => 'nullable|email|required_if:landlordOrFinanceDetails.paymentMethod,interac',
-
-            // // Bank Details for EFT and ACH
-            // 'landlordOrFinanceDetails.bankDetails' => 'nullable|array',
-            // 'landlordOrFinanceDetails.bankDetails.bankName' => 'required_if:landlordOrFinanceDetails.paymentMethod,EFT|string|max:50',
-            // 'landlordOrFinanceDetails.bankDetails.accountNumber' => 'required_if:landlordOrFinanceDetails.paymentMethod,EFT|numeric',
-            // 'landlordOrFinanceDetails.bankDetails.routingNumber' => 'required_if:landlordOrFinanceDetails.paymentMethod,EFT|numeric',
-            // 'landlordOrFinanceDetails.bankDetails.accountType' => 'required_if:landlordOrFinanceDetails.paymentMethod,EFT|string|in:Checking,Savings',
-            // 'landlordOrFinanceDetails.bankDetails.bankRoutingNumber' => 'required_if:landlordOrFinanceDetails.paymentMethod,ACH|numeric',
-            // 'landlordOrFinanceDetails.bankDetails.recipientName' => 'required_if:landlordOrFinanceDetails.paymentMethod,ACH|string|max:50',
-            // 'landlordOrFinanceDetails.bankDetails.accountNumber' => 'required_if:landlordOrFinanceDetails.paymentMethod,ACH|numeric',
-            // 'landlordOrFinanceDetails.bankDetails.accountType' => 'required_if:landlordOrFinanceDetails.paymentMethod,ACH|string|in:Checking,Savings',
-            // 'landlordOrFinanceDetails.bankDetails.individualOrBusiness' => 'required_if:landlordOrFinanceDetails.paymentMethod,ACH|string|in:individual,business',
-
-            // // Landlord Type Details
-            // 'landlordOrFinanceDetails.landlordType' => 'nullable|string|in:business,individual',
-            // 'landlordOrFinanceDetails.landlordInfo.businessName' => 'required_if:landlordOrFinanceDetails.landlordType,business|string|max:100',
-            // 'landlordOrFinanceDetails.landlordInfo.firstName' => 'required_if:landlordOrFinanceDetails.landlordType,individual|string|max:50',
-            // 'landlordOrFinanceDetails.landlordInfo.lastName' => 'required_if:landlordOrFinanceDetails.landlordType,individual|string|max:50',
-            // 'landlordOrFinanceDetails.landlordInfo.middleName' => 'nullable|string|max:50',
-
-            // //Address
-            // 'addressDetails.address' => 'required|string|max:255',
-            // 'addressDetails.province' => 'required|string|max:100',
-            // 'addressDetails.city' => 'required|string|max:100',
-            // 'addressDetails.postalCode' => 'required|string|max:10',
-            // 'addressDetails.unitNumber' => 'nullable|string|max:10',
-            // 'addressDetails.houseNumber' => 'nullable|string|max:10',
-            // 'addressDetails.streetName' => 'nullable|string|max:255',
-            // 'addressDetails.rentAmount' => 'required|numeric|min:100|max:50000',
-            // 'addressDetails.tenancyAgreement' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // Max 10MB
-            // 'addressDetails.reOccurringMonthlyDay' => 'required|integer|min:1|max:31',
-            // 'addressDetails.duration.from' => 'required|date|before_or_equal:addressDetails.duration.to',
-            // 'addressDetails.duration.to' => 'required|date|after_or_equal:addressDetails.duration.from',
-
-            // Validate Billing Info (Client-side encrypted)
-            'billingInfo.data' => 'required|string',
-            'billingInfo.iv' => 'required|string',
-        ]);
-
-        // If validation fails, return error response
-        if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
-        }
-
-        // Handle Tenancy Agreement File Upload
-        $tenancyAgreementPath = null;
-        if ($request->hasFile('tenancyAgreement')) {
-            $tenancyAgreementPath = $request->file('tenancyAgreement')->store('public/tenancyAgreements');
-        }
-
-        // Decode and decrypt client-side encrypted billing data
-        $clientEncryptedData = base64_decode($request->input('billingInfo.data'));
-        $iv = base64_decode($request->input('billingInfo.iv'));
-
-        // Optionally re-encrypt with Laravel's Crypt for an additional layer of security
-        $encryptedBillingInfo = Crypt::encrypt([
-            'data' => $clientEncryptedData,
-            'iv' => $iv,
-        ]);
-
-        // Begin a transaction to save user and billing data
-        DB::beginTransaction();
-
-        try {
-            $addressDetails = $request->input('accountType'); // This is already an array
-
-            // Now access the 'goal' field
-            $goal = $addressDetails['goal']; // Access the 'goal' field directly
-            // Save user details
-            $user = User::create([
-                'first_name' => e($request->input('personalDetails.firstName')),
-                'password' => e($request->input('personalDetails.password')),
-                'last_name' => e($request->input('personalDetails.lastName')),
-                'middle_name' => e($request->input('personalDetails.middleName')),
-                'email' => e($request->input('personalDetails.email')),
-                'phone' => e($request->input('personalDetails.phone')),
-                'status' => 'active', // Default status
-                'account_type' => e($request->input('accountType.goal')), // Store account type as JSON
-                'account_details' => json_encode($request->input('accountType')), // Store account type as JSON
-                'address_details' => json_encode($request->input('addressDetails')), // Store account type as JSON
-                'landlord_or_finance_details' => json_encode($request->input('getLandlordOrFinanceDetails')), // Store landlord or finance details as JSON
-                // Other user attributes as needed
+        // Save token to the newly created member
+        TeamMember::where('email', $email)
+            ->where('team_id', $team->id)
+            ->where('status', 'pending')
+            ->update([
+                'uuid'                  => Str::uuid(), // Generate UUID if not already set
+                'invitation_token'      => $token,
+                'invitation_expires_at' => $expiryDate,
             ]);
-            // Check if applicationType is "Co-applicant" or "Co-owner"
-            if (in_array($request->input('accountType.applicationType'), ['co_applicant', 'co_owner'])) {
-                // Create a team for the user
-                $team = Team::create([
-                    'name' => $goal, // Automatically encrypted
-                    'admin_id' => $user->id,
-                ]);
 
-                // Add the admin as a member of the team
-                Member::create([
-                    'team_id' => $team->id,
-                    'user_id' => $user->id,
-                    'first_name' => $user->first_name, // Automatically encrypted
-                    'last_name' => $user->last_name, // Automatically encrypted
-                    'email' => $user->email, // Automatically encrypted
-                ]);
-
-                // Add co-applicants as members of the team
-                $coApplicants = $request->input('accountType.coApplicants');
-                if (!empty($coApplicants)) {
-                    foreach ($coApplicants as $coApplicant) {
-                        Member::create([
-                            'team_id' => $team->id,
-                            'user_id' => null, // Co-applicants may not be registered users
-                            'first_name' => $coApplicant['firstName'], // Automatically encrypted
-                            'last_name' => $coApplicant['lastName'], // Automatically encrypted
-                            'email' => $coApplicant['email'], // Automatically encrypted
-                        ]);
-                    }
-                }
-            }
-
-            // Commit the transaction
-            DB::commit();
-
-            // Return success response
-            return response()->json([
-                'status' => 'success',
-                'data' => $request->input('accountType'),
-                'message' => 'User and double-encrypted billing information saved successfully',
-            ], 201);
-
-        } catch (\Exception $e) {
-            \Log::info('Co-Applicants:', $request->input('accountType.coApplicants'));
-            \Log::info('accountType:', $request->input('accountType'));
-            \Log::error('Registration Error: ' . $e->getMessage());
-            // Rollback on any failure
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to save information',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    protected function sendTeamInvitationEmail($email, $team, $admin)
-    {
+        // Prepare email details
         $details = [
-            'team_name' => $team->name,
-            'admin_name' => "{$admin->first_name} {$admin->last_name}",
-            'admin_email' => $admin->email,
+            'account_goal' => $user->account_goal,
+            'name'         => $name,
+            'admin_name'   => "{$user->first_name} {$user->last_name}",
+            'team_id'      => $team->uuid,
+            'address'      => $addressName,
+            'role'         => $user->account_goal === 'rent' ? 'Co-Applicant' : 'Co-Owner',
+            'token'        => $token,
         ];
 
+        // Send the email
         Mail::to($email)->send(new TeamInvitationMail($details));
     }
 
     protected function generatePaymentSchedules2($payment_type, $recurringDay, $durationFrom, $durationTo, $biWeekly = false)
     {
-        $type = $payment_type; // rent, mortgage, or bill
+        $type         = $payment_type;         // rent, mortgage, or bill
         $recurringDay = $recurringDay ?? null; // Day of the month
         $durationFrom = isset($durationFrom) ? Carbon::parse($durationFrom) : null;
-        $durationTo = isset($durationTo) ? Carbon::parse($durationTo) : null;
-        $biWeekly = $biWeekly ?? false; // Only for bills
+        $durationTo   = isset($durationTo) ? Carbon::parse($durationTo) : null;
+        $biWeekly     = $biWeekly ?? false; // Only for bills
 
-        $schedules = [];
+        $schedules   = [];
         $currentDate = Carbon::now(); // Today's date
 
         if ($type === 'rent' || $type === 'mortgage') {
@@ -319,7 +164,7 @@ class RegisterController extends Controller
                     $schedules[] = [
                         'payment_type' => $type,
                         'payment_date' => $paymentDate->toDateString(),
-                        'status' => 'due',
+                        'status'       => 'due',
                     ];
                 }
                 $currentDate->addMonth();
@@ -328,21 +173,21 @@ class RegisterController extends Controller
             if ($biWeekly) {
                 // Generate bi-weekly payment schedules (for bills)
                 $currentDate = $durationFrom ? $durationFrom->copy() : $currentDate->startOfDay();
-                $endDate = $durationTo ?? $currentDate->copy()->addMonths(6); // Default range of 6 months if not provided
+                $endDate     = $durationTo ?? $currentDate->copy()->addMonths(6); // Default range of 6 months if not provided
                 while ($currentDate->lte($endDate)) {
                     if ($currentDate->isFuture()) {
                         $schedules[] = [
                             'payment_type' => 'bill',
                             'payment_date' => $currentDate->toDateString(),
-                            'status' => 'due',
+                            'status'       => 'due',
                         ];
                     }
                     $currentDate->addWeeks(2);
                 }
             } else {
-                // Generate monthly payment schedules (for bills)
+                                                                                           // Generate monthly payment schedules (for bills)
                 $startDate = $durationFrom ? $durationFrom->copy() : $currentDate->copy(); // Use today if no start date
-                $endDate = $durationTo ?? $startDate->copy()->addMonths(6); // Default range of 6 months if not provided
+                $endDate   = $durationTo ?? $startDate->copy()->addMonths(6);              // Default range of 6 months if not provided
 
                 while ($startDate->lte($endDate)) {
                     $paymentDate = $startDate->day($recurringDay); // Set to recurring day of the month
@@ -352,7 +197,7 @@ class RegisterController extends Controller
                         $schedules[] = [
                             'payment_type' => 'bill',
                             'payment_date' => $paymentDate->toDateString(),
-                            'status' => 'due',
+                            'status'       => 'due',
                         ];
                     }
 
@@ -371,15 +216,15 @@ class RegisterController extends Controller
             //code...
             // Parse dates
             $durationFrom = $durationFrom ? Carbon::parse($durationFrom) : null;
-            $durationTo = $durationTo ? Carbon::parse($durationTo) : null;
-            $currentDate = Carbon::now(); // Today's date
+            $durationTo   = $durationTo ? Carbon::parse($durationTo) : null;
+            $currentDate  = Carbon::now(); // Today's date
 
             $schedules = [];
 
             if ($payment_type === 'rent' || $payment_type === 'mortgage') {
-                // Generate monthly payment schedules based on duration
-                $startDate = $durationFrom ?: $currentDate; // Default to today if no start date
-                $endDate = $durationTo ?: $currentDate->copy()->addMonths(12); // Default range to 1 year if no end date
+                                                                                 // Generate monthly payment schedules based on duration
+                $startDate = $durationFrom ?: $currentDate;                      // Default to today if no start date
+                $endDate   = $durationTo ?: $currentDate->copy()->addMonths(12); // Default range to 1 year if no end date
 
                 $currentDate = $startDate->copy();
                 while ($currentDate->lte($endDate)) {
@@ -389,7 +234,7 @@ class RegisterController extends Controller
                         $schedules[] = [
                             'payment_type' => $payment_type,
                             'payment_date' => $paymentDate->toDateString(),
-                            'status' => 'due',
+                            'status'       => 'due',
                         ];
                     }
 
@@ -397,9 +242,9 @@ class RegisterController extends Controller
                 }
             } elseif ($payment_type === 'bill') {
                 if ($biWeekly) {
-                    // Generate bi-weekly payment schedules (for bills)
-                    $startDate = $durationFrom ?: $currentDate->startOfDay(); // Start today if no start date
-                    $endDate = $durationTo ?: $currentDate->copy()->addMonths(6); // Default to 6 months if no end date
+                                                                                    // Generate bi-weekly payment schedules (for bills)
+                    $startDate = $durationFrom ?: $currentDate->startOfDay();       // Start today if no start date
+                    $endDate   = $durationTo ?: $currentDate->copy()->addMonths(6); // Default to 6 months if no end date
 
                     $currentDate = $startDate->copy();
                     while ($currentDate->lte($endDate)) {
@@ -407,15 +252,15 @@ class RegisterController extends Controller
                             $schedules[] = [
                                 'payment_type' => 'bill',
                                 'payment_date' => $currentDate->toDateString(),
-                                'status' => 'due',
+                                'status'       => 'due',
                             ];
                         }
                         $currentDate->addWeeks(2);
                     }
                 } else {
-                    // Generate monthly payment schedules (for bills)
-                    $startDate = $durationFrom ?: $currentDate->copy(); // Start today if no start date
-                    $endDate = $durationTo ?: $startDate->copy()->addMonths(6); // Default range of 6 months if no end date
+                                                                                  // Generate monthly payment schedules (for bills)
+                    $startDate = $durationFrom ?: $currentDate->copy();           // Start today if no start date
+                    $endDate   = $durationTo ?: $startDate->copy()->addMonths(6); // Default range of 6 months if no end date
 
                     $currentDate = $startDate->copy();
                     while ($currentDate->lte($endDate)) {
@@ -426,7 +271,7 @@ class RegisterController extends Controller
                             $schedules[] = [
                                 'payment_type' => 'bill',
                                 'payment_date' => $paymentDate->toDateString(),
-                                'status' => 'due',
+                                'status'       => 'due',
                             ];
                         }
 
@@ -443,7 +288,7 @@ class RegisterController extends Controller
 
     protected function generatePaymentSchedules($payment_type, $recurringDay, $durationFrom = null, $durationTo = null, $biWeekly = false)
     {
-        // Validate and cast recurring day
+                                                    // Validate and cast recurring day
         $recurringDay = (int) ($recurringDay ?? 1); // Default to 1 if null
         if ($recurringDay < 1 || $recurringDay > 31) {
             $recurringDay = 1; // Ensure it's within valid range
@@ -451,15 +296,15 @@ class RegisterController extends Controller
 
         // Parse dates
         $durationFrom = $durationFrom ? Carbon::parse($durationFrom) : null;
-        $durationTo = $durationTo ? Carbon::parse($durationTo) : null;
-        $currentDate = Carbon::now(); // Today's date
+        $durationTo   = $durationTo ? Carbon::parse($durationTo) : null;
+        $currentDate  = Carbon::now(); // Today's date
 
         $schedules = [];
 
         if ($payment_type === 'rent' || $payment_type === 'mortgage') {
-            // Generate monthly payment schedules
-            $startDate = $durationFrom ?: $currentDate; // Default to today if no start date
-            $endDate = $durationTo ?: $currentDate->copy()->addMonths(12); // Default range to 1 year if no end date
+                                                                             // Generate monthly payment schedules
+            $startDate = $durationFrom ?: $currentDate;                      // Default to today if no start date
+            $endDate   = $durationTo ?: $currentDate->copy()->addMonths(12); // Default range to 1 year if no end date
 
             $currentDate = $startDate->copy();
             while ($currentDate->lte($endDate)) {
@@ -469,7 +314,7 @@ class RegisterController extends Controller
                     $schedules[] = [
                         'payment_type' => $payment_type,
                         'payment_date' => $paymentDate->toDateString(),
-                        'status' => 'due',
+                        'status'       => 'due',
                     ];
                 }
 
@@ -477,9 +322,9 @@ class RegisterController extends Controller
             }
         } elseif ($payment_type === 'bill') {
             if ($biWeekly) {
-                // Generate bi-weekly payment schedules (for bills)
-                $startDate = $durationFrom ?: $currentDate->startOfDay(); // Start today if no start date
-                $endDate = $durationTo ?: $currentDate->copy()->addMonths(6); // Default to 6 months if no end date
+                                                                                // Generate bi-weekly payment schedules (for bills)
+                $startDate = $durationFrom ?: $currentDate->startOfDay();       // Start today if no start date
+                $endDate   = $durationTo ?: $currentDate->copy()->addMonths(6); // Default to 6 months if no end date
 
                 $currentDate = $startDate->copy();
                 while ($currentDate->lte($endDate)) {
@@ -487,15 +332,15 @@ class RegisterController extends Controller
                         $schedules[] = [
                             'payment_type' => 'bill',
                             'payment_date' => $currentDate->toDateString(),
-                            'status' => 'due',
+                            'status'       => 'due',
                         ];
                     }
                     $currentDate->addWeeks(2);
                 }
             } else {
-                // Generate monthly payment schedules (for bills)
-                $startDate = $durationFrom ?: $currentDate->copy(); // Start today if no start date
-                $endDate = $durationTo ?: $startDate->copy()->addMonths(6); // Default range of 6 months if no end date
+                                                                              // Generate monthly payment schedules (for bills)
+                $startDate = $durationFrom ?: $currentDate->copy();           // Start today if no start date
+                $endDate   = $durationTo ?: $startDate->copy()->addMonths(6); // Default range of 6 months if no end date
 
                 $currentDate = $startDate->copy();
                 while ($currentDate->lte($endDate)) {
@@ -506,7 +351,7 @@ class RegisterController extends Controller
                         $schedules[] = [
                             'payment_type' => 'bill',
                             'payment_date' => $paymentDate->toDateString(),
-                            'status' => 'due',
+                            'status'       => 'due',
                         ];
                     }
 
@@ -522,8 +367,8 @@ class RegisterController extends Controller
     {
         do {
             $uniqueString = Str::random(5);
-            $timestamp = now()->format('Ymd');
-            $teamName = "Team-{$uniqueString}-{$timestamp}";
+            $timestamp    = now()->format('Ymd');
+            $teamName     = "Team-{$uniqueString}-{$timestamp}";
         } while (Team::where('name', $teamName)->exists());
 
         return $teamName;
@@ -536,9 +381,9 @@ class RegisterController extends Controller
         {
             $mapping = [
                 'mortgage_cheque' => 'cheque',
-                'EFT' => 'EFT',
-                'rentInterac' => 'interac',
-                'rentCheque' => 'cheque',
+                'EFT'             => 'EFT',
+                'rentInterac'     => 'interac',
+                'rentCheque'      => 'cheque',
             ];
 
             return $mapping[$input] ?? 'cheque'; // Default to 'cheque' if input doesn't match
@@ -546,46 +391,50 @@ class RegisterController extends Controller
         // Create a wallet for the user
         Wallet::create([
             'user_id' => $user->id,
-            'balance' => 0.00, // Initial balance
+            'balance' => 0.00,                                 // Initial balance
             'details' => json_encode(['created_at' => now()]), // Optional details
         ]);
 
-        $addressId = null; // Initialize address ID
+        $addressId   = null; // Initialize address ID
+        $addressName = null; // Initialize address ID
+        $teamId      = null; // Initialize team ID
+
         // Save address data if available
-        if (!empty($data['addressDetails'])) {
+        if (! empty($data['addressDetails'])) {
             $address = Address::create([
-                'user_id' => $user->id,
-                'name' => $data['addressDetails']['address'] ?? null,
-                'city' => $data['addressDetails']['city'] ?? null,
-                'province' => $data['addressDetails']['province'] ?? null,
-                'postal_code' => $data['addressDetails']['postalCode'] ?? null,
-                'house_number' => $data['addressDetails']['houseNumber'] ?? null,
-                'unit_number' => $data['addressDetails']['unitNumber'] ?? null,
-                'street_name' => $data['addressDetails']['streetName'] ?? null,
-                'amount' => $data['addressDetails']['rentAmount'] ?? 0,
+                'user_id'                 => $user->id,
+                'name'                    => $data['addressDetails']['address'] ?? null,
+                'city'                    => $data['addressDetails']['city'] ?? null,
+                'province'                => $data['addressDetails']['province'] ?? null,
+                'postal_code'             => $data['addressDetails']['postalCode'] ?? null,
+                'house_number'            => $data['addressDetails']['houseNumber'] ?? null,
+                'unit_number'             => $data['addressDetails']['unitNumber'] ?? null,
+                'street_name'             => $data['addressDetails']['streetName'] ?? null,
+                'amount'                  => $data['addressDetails']['rentAmount'] ?? 0,
                 'reoccurring_monthly_day' => $data['addressDetails']['reOccurringMonthlyDay'] ?? null,
-                'duration_from' => $data['addressDetails']['duration']['from'] ?? null,
-                'duration_to' => $data['addressDetails']['duration']['to'] ?? null,
-                'tenancyAgreement' => $data['addressDetails']['tenancyAgreement'] ?? null, // Assume file upload handling
+                'duration_from'           => $data['addressDetails']['duration']['from'] ?? null,
+                'duration_to'             => $data['addressDetails']['duration']['to'] ?? null,
+                'tenancyAgreement'        => $data['addressDetails']['tenancyAgreement'] ?? null, // Assume file upload handling
             ]);
 
             // Store the address ID
-            $addressId = $address->id;
+            $addressId   = $address->id;
+            $addressName = $address->name;
             function generateLandlordDetails($data)
             {
                 $paymentMethod = mapPaymentMethod($data['getLandlordOrFinanceDetails']['paymentMethod']);
-                $type = $data['accountType']['goal'] ?? 'rent';
-                $landlordType = $data['getLandlordOrFinanceDetails']['landlordType'] ?? 'individual';
+                $type          = $data['accountType']['goal'] ?? 'rent';
+                $landlordType  = $data['getLandlordOrFinanceDetails']['landlordType'] ?? 'individual';
 
                 // Mortgage Cheque Details
                 if ($paymentMethod === 'cheque' && $type === 'mortgage') {
                     return json_encode([
-                        'accountNumber' => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['accountNumber'] ?? null,
-                        'transitNumber' => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['transitNumber'] ?? null,
+                        'accountNumber'     => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['accountNumber'] ?? null,
+                        'transitNumber'     => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['transitNumber'] ?? null,
                         'institutionNumber' => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['institutionNumber'] ?? null,
-                        'name' => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['name'] ?? null,
-                        'address' => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['address'] ?? null,
-                        'paymentMethod' => $paymentMethod,
+                        'name'              => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['name'] ?? null,
+                        'address'           => $data['getLandlordOrFinanceDetails']['mortgageChequeDetails']['address'] ?? null,
+                        'paymentMethod'     => $paymentMethod,
                     ]);
                 }
 
@@ -593,14 +442,14 @@ class RegisterController extends Controller
                 if ($paymentMethod === 'EFT' && $type === 'mortgage') {
                     return json_encode([
                         'institutionNumber' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['institutionNumber'] ?? null,
-                        'transitNumber' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['transitNumber'] ?? null,
-                        'accountNumber' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['accountNumber'] ?? null,
+                        'transitNumber'     => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['transitNumber'] ?? null,
+                        'accountNumber'     => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['accountNumber'] ?? null,
                         'bankAccountNumber' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['bankAccountNumber'] ?? null,
-                        'biWeeklyDueDate' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['biWeeklyDueDate'] ?? null,
-                        'lenderAddress' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['lenderAddress'] ?? null,
-                        'lenderName' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['lenderName'] ?? null,
-                        'paymentFrequency' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['paymentFrequency'] ?? null,
-                        'refNumber' => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['refNumber'] ?? null,
+                        'biWeeklyDueDate'   => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['biWeeklyDueDate'] ?? null,
+                        'lenderAddress'     => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['lenderAddress'] ?? null,
+                        'lenderName'        => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['lenderName'] ?? null,
+                        'paymentFrequency'  => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['paymentFrequency'] ?? null,
+                        'refNumber'         => $data['getLandlordOrFinanceDetails']['mortgageEftDetails']['refNumber'] ?? null,
                     ]);
                 }
 
@@ -621,8 +470,8 @@ class RegisterController extends Controller
                 // Rent Cheque Details for Individual
                 if ($paymentMethod === 'cheque' && $type === 'rent' && $landlordType === 'individual') {
                     return json_encode([
-                        'firstName' => $data['getLandlordOrFinanceDetails']['landlordInfo']['firstName'] ?? null,
-                        'lastName' => $data['getLandlordOrFinanceDetails']['landlordInfo']['lastName'] ?? null,
+                        'firstName'  => $data['getLandlordOrFinanceDetails']['landlordInfo']['firstName'] ?? null,
+                        'lastName'   => $data['getLandlordOrFinanceDetails']['landlordInfo']['lastName'] ?? null,
                         'middleName' => $data['getLandlordOrFinanceDetails']['landlordInfo']['middleName'] ?? null,
                     ]);
                 }
@@ -634,23 +483,22 @@ class RegisterController extends Controller
             if ($address) {
                 // dd($data['getLandlordOrFinanceDetails']['paymentMethod'], generateLandlordDetails($data));
                 LandlordFinancerDetail::create([
-                    'address_id' => $address->id,
-                    'type' => $data['accountType']['goal'] ?? 'rent', // Rent or mortgage
+                    'address_id'     => $address->id,
+                    'type'           => $data['accountType']['goal'] ?? 'rent',                                              // Rent or mortgage
                     'payment_method' => mapPaymentMethod($data['getLandlordOrFinanceDetails']['paymentMethod'] ?? 'cheque'), // Map payment method
-                    'landlord_type' => $data['getLandlordOrFinanceDetails']['landlordType'] ?? 'individual', // Landlord type
-                    'details' => generateLandlordDetails($data), // Generate the dynamic JSON details
+                    'landlord_type'  => $data['getLandlordOrFinanceDetails']['landlordType'] ?? 'individual',                // Landlord type
+                    'details'        => generateLandlordDetails($data),                                                      // Generate the dynamic JSON details
                 ]);
             }
         }
 
         // Save Team
-        if (!empty($data['accountType']['coApplicants'])) {
+        if (! empty($data['accountType']['coApplicants'])) {
             $team = Team::create([
-                'user_id' => $user->id,
+                'user_id'    => $user->id,
                 'address_id' => $addressId,
-                'name' => $this->generateUniqueTeamName(),
-                // 'name' => $data['accountType']['plan'] ?? 'Default Team Name',
-                'members' => json_encode($data['accountType']['coApplicants']), // Store co-applicants in JSON format
+                'name'       => $this->generateUniqueTeamName(),
+                'members'    => json_encode($data['accountType']['coApplicants']), // Store co-applicants in JSON format
             ]);
 
             $user->team_id = $team->id;
@@ -659,13 +507,14 @@ class RegisterController extends Controller
 
             // Add admin (current user) as a team member
             TeamMember::create([
-                'team_id' => $team->id,
-                'name' => "{$user->first_name} {$user->last_name}",
-                'email' => $user->email,
-                'status' => 'accepted',
-                'role' => 'admin',
-                'amount' => round(($data['accountType']['primaryRentOrMortgageAmount'] / 100) * $data['addressDetails']['rentAmount'], 2), // Admin's rent amount
-                'percentage' => $data['accountType']['primaryRentOrMortgageAmount'], // Rent amount from the applicant
+                'team_id'    => $team->id,
+                'user_id'    => $user->id,
+                'name'       => "{$user->first_name} {$user->last_name}",
+                'email'      => $user->email,
+                'status'     => 'accepted',
+                'role'       => 'admin',
+                'amount'     => round(($data['accountType']['primaryRentOrMortgageAmount'] / 100) * $data['addressDetails']['rentAmount'], 2), // Admin's rent amount
+                'percentage' => $data['accountType']['primaryRentOrMortgageAmount'],                                                           // Rent amount from the applicant
             ]);
 
             // Add co-applicants as team members
@@ -682,41 +531,49 @@ class RegisterController extends Controller
                 // Calculate amount based on percentage
                 $calculatedAmount = round(($percentage / 100) * $baseAmount, 2);
 
+                $teamMemberName = `{$applicant['firstName']} {$applicant['lastName']}`;
+                $memberRole     = "member";
+
                 TeamMember::create([
-                    'team_id' => $team->id,
-                    'name' => "{$applicant['firstName']} {$applicant['lastName']}",
-                    'email' => $applicant['email'],
-                    'status' => 'pending',
-                    'role' => 'member',
+                    'team_id'    => $team->id,
+                    'name'       => $teamMemberName,
+                    'email'      => $applicant['email'],
+                    'status'     => 'pending',
+                    'role'       => $memberRole,
                     'percentage' => $percentage ?? 0,
-                    'amount' => $calculatedAmount,
+                    'amount'     => $calculatedAmount,
                 ]);
 
                 // Send email to co-applicant
-                $this->sendTeamInvitationEmail($applicant['email'], $team, $user);
+                $this->sendTeamInvitationEmail($applicant['email'], $teamMemberName, $memberRole, $addressName, $team, $user);
             }
         }
 
         // Save credit card data if available
-        if (!empty($data['accountType']['creditCardLimit']) && !empty($data['accountType']['creditCardDueDate'])) {
+        if (! empty($data['accountType']['creditCardLimit']) && ! empty($data['accountType']['creditCardDueDate'])) {
             BuildCreditCard::create([
-                'card_id' => $data['card_id'] ?? null, // Pass this from the request or logic
-                'user_id' => $user->id,
-                'cc_limit' => $data['accountType']['creditCardLimit'], // Credit card limit
+                'card_id'     => $data['card_id'] ?? null, // Pass this from the request or logic
+                'user_id'     => $user->id,
+                'cc_limit'    => $data['accountType']['creditCardLimit'],   // Credit card limit
                 'cc_due_date' => $data['accountType']['creditCardDueDate'], // Credit card due date (day of the month)
             ]);
         }
 
         // Save additional related data as needed...
-        return $addressId; // Return the address ID (null if no address was saved)
+        // Return the address ID (null if no address was saved)
+        return [
+            'addressId' => $addressId,
+            'teamId'    => $teamId,
+        ];
     }
 
     public function register(Request $request)
-    { // Decode JSON data
+{ // Decode JSON data
+
         $jsonData = json_decode($request->data, true);
-        if (!$jsonData) {
+        if (! $jsonData) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Invalid JSON data',
             ], 422);
         }
@@ -747,39 +604,39 @@ class RegisterController extends Controller
         //  dd($request->hasFile('tenancyAgreement'));
         //  dd($data);
         $validator = Validator::make($data, [
-            'personalDetails.firstName' => 'required|string|max:50',
-            'personalDetails.lastName' => 'required|string|max:50',
-            'personalDetails.middleName' => 'nullable|string|max:50',
-            'personalDetails.email' => 'required|email|unique:users,email',
-            'personalDetails.phone' => 'required|string|max:15',
-            'accountType.goal' => 'required|string|in:rent,mortgage',
-            'accountType.applicationType' => 'nullable|string|in:sole_applicant,co_applicant,owner,co_owner',
-            'accountType.coApplicants' => 'nullable|array',
+            'personalDetails.firstName'            => 'required|string|max:50',
+            'personalDetails.lastName'             => 'required|string|max:50',
+            'personalDetails.middleName'           => 'nullable|string|max:50',
+            'personalDetails.email'                => 'required|email|unique:users,email',
+            'personalDetails.phone'                => 'required|string|max:15',
+            'accountType.goal'                     => 'required|string|in:rent,mortgage',
+            'accountType.applicationType'          => 'nullable|string|in:sole_applicant,co_applicant,owner,co_owner',
+            'accountType.coApplicants'             => 'nullable|array',
             'accountType.coApplicants.*.firstName' => 'required_with:accountType.coApplicants|string|max:50',
-            'accountType.coApplicants.*.lastName' => 'required_with:accountType.coApplicants|string|max:50',
-            'accountType.coApplicants.*.email' => 'required_with:accountType.coApplicants|email',
-            'addressDetails.tenancyAgreement' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // Max 10MB
+            'accountType.coApplicants.*.lastName'  => 'required_with:accountType.coApplicants|string|max:50',
+            'accountType.coApplicants.*.email'     => 'required_with:accountType.coApplicants|email',
+            'addressDetails.tenancyAgreement'      => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // Max 10MB
         ]);
 
         $validator->after(function ($validator) use ($data) {
-            if (!empty($data['accountType']['coApplicants'])) {
+            if (! empty($data['accountType']['coApplicants'])) {
                 $emails = array_column($data['accountType']['coApplicants'], 'email');
-                $goal = $data['accountType']['goal'] ?? 'rent'; // Default to 'rent' if not provided
-        
+                $goal   = $data['accountType']['goal'] ?? 'rent'; // Default to 'rent' if not provided
+
                 // Determine the message based on the account goal
                 $errorMessage = $goal === 'mortgage'
-                    ? 'Co-owner emails must be unique.'
-                    : 'Co-applicant emails must be unique.';
-        
+                ? 'Co-owner emails must be unique.'
+                : 'Co-applicant emails must be unique.';
+
                 // Check for duplicate emails in the input
                 if (count($emails) !== count(array_unique($emails))) {
                     $validator->errors()->add('accountType.coApplicants', $errorMessage);
                 }
-        
+
                 // Check for existing emails in the team_members table
                 $existingEmails = \App\Models\TeamMember::whereIn('email', $emails)->pluck('email')->toArray();
-        
-                if (!empty($existingEmails)) {
+
+                if (! empty($existingEmails)) {
                     $existingEmailsList = implode(', ', $existingEmails);
                     $validator->errors()->add(
                         'accountType.coApplicants',
@@ -788,12 +645,14 @@ class RegisterController extends Controller
                 }
             }
         });
-        
-        
 
         if ($validator->fails()) {
             return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
         }
+
+        // if (!session('veriff_verified')) {
+        //     return response()->json(['message' => 'User must complete verification'], 403);
+        // }
 
         DB::beginTransaction();
         // $jsonData = json_decode($request->data, true);
@@ -803,12 +662,12 @@ class RegisterController extends Controller
 
         // dd($data, $request->hasFile($data['addressDetails']['tenancyAgreement']));
         function mapPaymentSetup($input)
-        {
+    {
             $mapping = [
                 'Continue_paying_existing_mortgage' => 'new',
-                'Continue_paying_existing_rent' => 'new',
-                'Setup_payment_new_mortgage' => 'existing',
-                'Setup_payment_new_rental' => 'existing',
+                'Continue_paying_existing_rent'     => 'new',
+                'Setup_payment_new_mortgage'        => 'existing',
+                'Setup_payment_new_rental'          => 'existing',
             ];
 
             return $mapping[$input] ?? 'new';
@@ -822,79 +681,71 @@ class RegisterController extends Controller
             $tenancyAgreementPath = null;
 
             if ($request->hasFile('tenancyAgreement')) {
-            
+
                 // Generate a unique file name
                 $uniqueName = 'TA' . strtoupper(uniqid()) . '.' . $request->file('tenancyAgreement')->getClientOriginalExtension();
-            
+
                 // Store the file with the custom name in the specified directory
                 $tenancyAgreementPath = $request->file('tenancyAgreement')->storeAs(
                     'tenancyAgreements', // Directory
-                    $uniqueName, // Custom file name
-                    'public' // Storage disk
+                    $uniqueName,         // Custom file name
+                    'public'             // Storage disk
                 );
-            
+
                 // Store the file path in the $data array
                 $data['addressDetails']['tenancyAgreement'] = $tenancyAgreementPath;
             }
-            
 
             // Now access the 'goal' field
             $user = User::create([
-                'first_name' => $data['personalDetails']['firstName'],
-                'last_name' => $data['personalDetails']['lastName'] ?? null,
-                'middle_name' => $data['personalDetails']['middleName'],
-                'email' => $data['personalDetails']['email'],
-                'phone' => $data['personalDetails']['phone'],
-                'password' => $data['personalDetails']['password'], // Hash password
-                'account_goal' => $data['accountType']['goal'],
-                'account_type' => $data['accountType']['applicationType'] ?? null,
+                'first_name'    => $data['personalDetails']['firstName'],
+                'last_name'     => $data['personalDetails']['lastName'] ?? null,
+                'middle_name'   => $data['personalDetails']['middleName'],
+                'email'         => $data['personalDetails']['email'],
+                'phone'         => $data['personalDetails']['phone'],
+                'password'      => $data['personalDetails']['password'], // Hash password
+                'account_goal'  => $data['accountType']['goal'],
+                'account_type'  => $data['accountType']['applicationType'] ?? null,
                 'payment_setup' => $paymentSetup,
-                'status' => 'pending', // Set the default status or use the input
+                'status'        => 'pending', // Set the default status or use the input
             ]);
 
             // Save related data and get the address ID
-            $addressId = $this->saveRelatedData($user, $data);
+            $relatedData = $this->saveRelatedData($user, $data);
+            $addressId   = $relatedData['addressId'];
+            $teamId      = $relatedData['teamId'];
 
-            $recurringDay = $data['addressDetails']['reOccurringMonthlyDay'] ?? null;
+            $recurringDay                               = $data['addressDetails']['reOccurringMonthlyDay'] ?? null;
             $data['addressDetails']['duration']['from'] = Carbon::parse($data['addressDetails']['duration']['from']) ?? null;
-            $data['addressDetails']['duration']['to'] = Carbon::parse($data['addressDetails']['duration']['to']) ?? null;
-            $houseAmount = $data['addressDetails']['rentAmount'] ?? 0;
-            $paymentType = $data['accountType']['goal']; // rent, mortgage, or bill
+            $data['addressDetails']['duration']['to']   = Carbon::parse($data['addressDetails']['duration']['to']) ?? null;
+            $houseAmount                                = $data['addressDetails']['rentAmount'] ?? 0;
+            $paymentType                                = $data['accountType']['goal']; // rent, mortgage, or bill
 
             // Validate recurring day
-            if (!is_numeric($recurringDay) || $recurringDay < 1 || $recurringDay > 31) {
+            if (! is_numeric($recurringDay) || $recurringDay < 1 || $recurringDay > 31) {
                 $recurringDay = 1; // Default to 1 if invalid
             }
 
-            // Save a single payment schedule
-            $paymentSchedule = PaymentSchedule::create([
-                'user_id' => $user->id,
-                'payment_type' => $paymentType,
-                'recurring_day' => (int) $recurringDay,
-                'amount' => $houseAmount, // Include the amount
-                'address_id' => $addressId, // Include address ID for rent/mortgage
-                'duration_from' => Carbon::parse($data['addressDetails']['duration']['from']) ?? null,
-                'duration_to' => Carbon::parse($data['addressDetails']['duration']['to']) ?? null,
-                'reminder_dates' => null, // Initially null
-                'status' => 'active',
-            ]);
+            // Use both IDs for payment schedule creation
+            $scheduleParams = [
+                'user_id'         => $user->id,
+                'payment_type'    => $paymentType,
+                'recurring_day'   => (int) $recurringDay,
+                'amount'          => $houseAmount,
+                'address_id'      => $addressId,
+                'duration_from'   => Carbon::parse($data['addressDetails']['duration']['from']) ?? null,
+                'duration_to'     => Carbon::parse($data['addressDetails']['duration']['to']) ?? null,
+                'status'          => 'active',
+                'is_team_payment' => ! is_null($teamId),
+                'team_id'         => $teamId,
+            ];
 
-            // dd($paymentSchedule, Carbon::parse($data['addressDetails']['duration']['to'])->endOfDay());
-            // Generate reminders using the model method
-            $reminders = $paymentSchedule->generateReminders();
+            // Save the payment schedule
+            $paymentSchedule = PaymentSchedule::create($scheduleParams);
 
-            // Save the reminders in the database as JSON
-            $paymentSchedule->update(['reminder_dates' => json_encode($reminders)]);
-
-            // Queue email notifications for each reminder
-            foreach ($reminders as $paymentDate => $reminderDates) {
-                foreach ($reminderDates as $key => $date) {
-                    if (Carbon::parse($date)->isFuture()) {
-                        Notification::route('mail', $user->email)
-                            ->notify(new PaymentReminderNotification($paymentSchedule, $key));
-                    }
-                }
-            }
+            // Create reminders in the database
+            $createdReminders = $paymentSchedule->createReminders();
+            // \Log::info('Database Error during registration:', ['createdReminders' => $createdReminders]);
 
             // In your controller
             Mail::to($user->email)->send(new RegistrationVerificationMail($user));
@@ -902,33 +753,50 @@ class RegisterController extends Controller
             DB::commit();
 
             return response()->json([
-                'status' => 'success',
+                'status'  => 'success',
                 'message' => 'User registered successfully.',
             ], 200);
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database-specific errors
+            DB::rollBack();
+            \Log::error('Database Error during registration:', ['error' => $e->getMessage(), 'sql' => $e->getSql()]);
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Database error occurred during registration',
+                'error'   => $e->getMessage(),
+            ], 500);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Handle validation errors
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validation error',
+                'errors'  => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
+            // General exception handling (already in your code)
             DB::rollBack();
             \Log::error('Registration Error:', ['error' => $e->getMessage()]);
             return response()->json([
-                'status' => 'error',
-                'data' => $request->all(),
+                'status'  => 'error',
                 'message' => 'Failed to save information',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
 
     public function verifyOtp(Request $request)
-    {
+{
         $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'otp_code' => 'required|string',
         ]);
 
         // Find the user by email
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
 
@@ -942,8 +810,8 @@ class RegisterController extends Controller
         }
 
         // Mark the user as verified
-        $user->is_verified = true;
-        $user->otp_code = null; // Clear OTP
+        $user->is_verified    = true;
+        $user->otp_code       = null; // Clear OTP
         $user->otp_expires_at = null;
         $user->save();
 
@@ -951,12 +819,12 @@ class RegisterController extends Controller
     }
 
     public function sendEmailVerificationCode(Request $request)
-    {
+{
         try {
             // Validate the email input
             $request->validate([
                 'email' => 'required|email',
-                'name' => 'nullable|string',
+                'name'  => 'nullable|string',
             ]);
 
             // Generate a 6-digit code
@@ -964,7 +832,7 @@ class RegisterController extends Controller
 
             // Retrieve the user's email and name from the request
             $email = $request->input('email');
-            $name = $request->input('name', 'Customer'); // Default to "Customer" if no name provided
+            $name  = $request->input('name', 'Customer'); // Default to "Customer" if no name provided
 
             // Send the verification code via email
             Mail::to($email)->send(new SendVerificationCode($code, $name));
@@ -977,27 +845,27 @@ class RegisterController extends Controller
             // Handle validation error
             return response()->json([
                 'message' => 'Invalid input.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             // Handle email sending error or other exceptions
             return response()->json([
                 'message' => 'Failed to send verification code.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
 
     public function verifyEmailCode(Request $request)
-    {
+{
         try {
             // Validate the email and code input
             $request->validate([
                 'email' => 'required|email',
-                'code' => 'required|digits:6',
+                'code'  => 'required|digits:6',
             ]);
 
-            $email = $request->input('email');
+            $email       = $request->input('email');
             $enteredCode = $request->input('code');
 
             // Retrieve the code from the session using the email key
@@ -1015,20 +883,20 @@ class RegisterController extends Controller
             // Handle validation error
             return response()->json([
                 'message' => 'Invalid input.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             // Handle unexpected errors
             return response()->json([
                 'message' => 'An error occurred during verification.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
     public function getCities($province)
-    {
+{
         // Validate the province parameter to prevent SQL injection
-        if (!$province) {
+        if (! $province) {
             return response()->json(['error' => 'Province is required'], 400);
         }
 
@@ -1039,9 +907,8 @@ class RegisterController extends Controller
 
         return response()->json($cities);
     }
-
     public function sendPhoneVerificationCode(Request $request)
-    {
+{
         try {
             // Validate phone number format
             $request->validate([
@@ -1049,7 +916,7 @@ class RegisterController extends Controller
             ]);
 
             // Generate a 6-digit verification code
-            $code = rand(100000, 999999);
+            $code  = rand(100000, 999999);
             $phone = $request->input('phone');
 
             // Store the code in the session using the phone number as the key
@@ -1068,35 +935,34 @@ class RegisterController extends Controller
             // Handle validation error
             return response()->json([
                 'message' => 'Invalid phone number format.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Twilio\Exceptions\RestException $e) {
             // Handle Twilio API errors
             return response()->json([
                 'message' => 'Failed to send SMS via Twilio.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         } catch (\Throwable $th) {
             // Handle any other errors
             return response()->json([
                 'message' => 'An unexpected error occurred while sending the verification code.',
-                'error' => $th->getMessage(),
+                'error'   => $th->getMessage(),
             ], 500);
         }
     }
-
     public function verifyPhoneCode(Request $request)
-    {
+{
         try {
             // Validate phone number and code format
             $request->validate([
                 'phone' => 'required|string|', // Canadian phone number with +1 code
-                'code' => 'required|digits:6',
+                'code'  => 'required|digits:6',
             ]);
 
-            $phone = $request->input('phone');
+            $phone       = $request->input('phone');
             $enteredCode = $request->input('code');
-            $storedCode = Session::get("verification_code_{$phone}");
+            $storedCode  = Session::get("verification_code_{$phone}");
 
             if ($storedCode && $enteredCode == $storedCode) {
                 // Clear the code from the session upon successful verification
@@ -1111,20 +977,20 @@ class RegisterController extends Controller
             // Handle validation error
             return response()->json([
                 'message' => 'Validation failed.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
 
         } catch (\Throwable $th) {
             // Handle any other unexpected errors
             return response()->json([
                 'message' => 'An unexpected error occurred during verification.',
-                'error' => $th->getMessage(),
+                'error'   => $th->getMessage(),
             ], 500);
         }
     }
 
     public function deleteUser($id)
-    {
+{
         $user = User::findOrFail($id);
         $user->update(['status' => 'deleted']);
 
@@ -1135,7 +1001,7 @@ class RegisterController extends Controller
     }
 
     public function restoreUser($id)
-    {
+{
         $user = User::where('id', $id)->where('status', 'deleted')->firstOrFail();
         $user->update(['status' => 'active']);
 
@@ -1146,7 +1012,7 @@ class RegisterController extends Controller
     }
 
     public function getUsersByStatus($status)
-    {
+{
         $users = User::where('status', $status)->get();
 
         return response()->json($users);

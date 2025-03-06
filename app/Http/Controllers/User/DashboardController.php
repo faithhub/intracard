@@ -62,6 +62,7 @@ class DashboardController extends Controller
             $response     = [];
             $account_goal = $user->account_goal;
 
+            // dd($user);
             // Get team address if user is a team member
             $address = null;
             if ($user->is_team) {
@@ -107,6 +108,53 @@ class DashboardController extends Controller
             //     ] : null;
             // }
 
+            // if ($request->has('address')) {
+            //     if ($user->is_team) {
+            //         // Get team member details for percentage calculation
+            //         // Get team with its address and members
+            //         $team = Team::where('id', $user->team_id)
+            //             ->with(['address', 'teamMembers' => function ($query) use ($user) {
+            //                 $query->where('user_id', $user->id)
+            //                     ->where('status', 'accepted');
+            //             }])
+            //             ->first();
+
+            //         // dd($team, $user);
+
+            //         if ($team && $team->address) {
+            //             $teamMember = $team->teamMembers->first(); // This will get the current user's team membership
+            //             if ($teamMember) {
+            //                 $totalAmount      = $team->address->amount;
+            //                 $percentage       = $teamMember->percentage;
+            //                 $calculatedAmount = ($totalAmount * ($percentage / 100));
+
+            //                 $response['address'] = [
+            //                      ...$team->address->toArray(),
+            //                     'title'             => $user->account_goal === 'mortgage'
+            //                     ? 'Mortgage Finance Details'
+            //                     : 'Landlord Details',
+            //                     'account_goal'      => $user->account_goal,
+            //                     'total_amount'      => $totalAmount,
+            //                     'team_percentage'   => $percentage,
+            //                     'calculated_amount' => $calculatedAmount,
+            //                     'amount'            => $calculatedAmount,
+            //                     'is_team_member'    => true,
+            //                 ];
+            //             }
+            //         }
+            //     } else {
+            //         $response['address'] = $user->address ? [
+            //              ...$user->address->toArray(),
+            //             'title'          => $user->account_goal === 'mortgage'
+            //             ? 'Mortgage Finance Details'
+            //             : 'Landlord Details',
+            //             'is_team_member' => false,
+            //             'total_amount'   => $user->address->amount,
+            //             'account_goal'   => $user->account_goal,
+            //         ] : null;
+            //     }
+            // }
+
             if ($request->has('address')) {
                 if ($user->is_team) {
                     // Get team member details for percentage calculation
@@ -117,39 +165,46 @@ class DashboardController extends Controller
                                 ->where('status', 'accepted');
                         }])
                         ->first();
-
-                    // dd($team, $user);
-
+            
+            
                     if ($team && $team->address) {
                         $teamMember = $team->teamMembers->first(); // This will get the current user's team membership
                         if ($teamMember) {
                             $totalAmount      = $team->address->amount;
                             $percentage       = $teamMember->percentage;
                             $calculatedAmount = ($totalAmount * ($percentage / 100));
-
+            
                             $response['address'] = [
-                                 ...$team->address->toArray(),
+                                ...$team->address->toArray(),
                                 'title'             => $user->account_goal === 'mortgage'
-                                ? 'Mortgage Finance Details'
-                                : 'Landlord Details',
+                                    ? 'Mortgage Finance Details'
+                                    : 'Landlord Details',
                                 'account_goal'      => $user->account_goal,
                                 'total_amount'      => $totalAmount,
                                 'team_percentage'   => $percentage,
                                 'calculated_amount' => $calculatedAmount,
                                 'amount'            => $calculatedAmount,
                                 'is_team_member'    => true,
+                                // Add this to correctly fetch the tenancy agreement
+                                'tenancy_agreement_url' => $team->address->tenancyAgreement 
+                                    ? asset('storage/' . $team->address->tenancyAgreement) 
+                                    : null,
                             ];
                         }
                     }
                 } else {
                     $response['address'] = $user->address ? [
-                         ...$user->address->toArray(),
+                        ...$user->address->toArray(),
                         'title'          => $user->account_goal === 'mortgage'
-                        ? 'Mortgage Finance Details'
-                        : 'Landlord Details',
+                            ? 'Mortgage Finance Details'
+                            : 'Landlord Details',
                         'is_team_member' => false,
                         'total_amount'   => $user->address->amount,
                         'account_goal'   => $user->account_goal,
+                        // Add this to correctly fetch the tenancy agreement
+                        'tenancy_agreement_url' => $user->address->tenancyAgreement 
+                            ? asset('storage/' . $user->address->tenancyAgreement) 
+                            : null,
                     ] : null;
                 }
             }
@@ -433,7 +488,6 @@ class DashboardController extends Controller
             ], 500);
         }
     }
-
     public function verifyEmailCode(Request $request)
     {
         try {

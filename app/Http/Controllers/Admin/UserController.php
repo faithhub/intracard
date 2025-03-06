@@ -2,9 +2,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
+use App\Models\Bill;
+use App\Models\Card;
 use App\Models\User;
-use Illuminate\Http\Request;
+use App\Models\VeriffSession;
+use App\Models\Wallet;
+use App\Models\WalletAllocation;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
@@ -127,34 +133,209 @@ class UserController extends Controller
                 'date_deactivated' => $user->date_deactivated ? $user->date_deactivated->format('d M Y, h:i A') : null,
             ];
 
+            // First check for any Veriff session by email, regardless of status
+            $veriffSession = VeriffSession::where('email', $user->email)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+// Initialize verification data in metadata
+            $data['metadata']['verification'] = [
+                'has_session'   => false,
+                'is_approved'   => false,
+                'status'        => 'pending',
+                'basic_info'    => null,
+                'detailed_info' => null,
+            ];
+
+            if ($veriffSession) {
+// We have at least a session, populate basic info
+                $data['metadata']['verification']['has_session'] = true;
+                $data['metadata']['verification']['basic_info']  = [
+                    'session_id'  => $veriffSession->session_id,
+                    'created_at'  => $veriffSession->created_at->format('F j, Y'),
+                    'vendor_data' => $veriffSession->vendor_data,
+                    'end_user_id' => $veriffSession->end_user_id,
+                ];
+
+// Check if status is approved
+                if ($veriffSession->status === 'approved' && ! empty($veriffSession->webhook_payload)) {
+                    $data['metadata']['verification']['is_approved'] = true;
+                    $data['metadata']['verification']['status']      = 'approved';
+
+                    // Extract detailed verification info from webhook payload
+                    $payload = $veriffSession->webhook_payload;
+
+                    // Initialize detailed info object
+                    $detailedInfo = [];
+
+                    // Extract data if verification structure exists
+                    // Process webhook payload if available
+
+                    if (!empty($veriffSession->webhook_payload)) {
+                        $payload = $veriffSession->webhook_payload;
+
+                        // If it's still a JSON string, decode it
+                        if (is_string($payload)) {
+                            $payload = json_decode($payload, true);
+                        }
+
+                        // Basic verification info
+                         if (is_array($payload) && isset($payload['verification'])) {
+                            $v = $payload['verification']; // Shorthand for verification object
+
+                            // Basic verification metadata
+                            $detailedInfo['attempt_id']    = $v['attemptId'] ?? $v['id'] ?? null;
+                            $detailedInfo['status']        = $v['status'] ?? 'pending';
+                            $detailedInfo['code']          = $v['code'] ?? null;
+                            $detailedInfo['reason']        = $v['reason'] ?? null;
+                            $detailedInfo['reason_code']   = $v['reasonCode'] ?? null;
+                            $detailedInfo['decision_time'] = isset($v['decisionTime']) ?
+                            Carbon::parse($v['decisionTime'])->format('F j, Y') : null;
+                            $detailedInfo['acceptance_time'] = isset($v['acceptanceTime']) ?
+                            Carbon::parse($v['acceptanceTime'])->format('F j, Y') : null;
+                            $detailedInfo['vendor_data'] = $v['vendorData'] ?? null;
+                            $detailedInfo['end_user_id'] = $v['endUserId'] ?? null;
+
+                            // User defined status based on verification status
+                            if ($detailedInfo['status'] === 'approved') {
+                                $detailedInfo['user_defined_status'] = 'Verified';
+                            } elseif ($detailedInfo['status'] === 'declined') {
+                                $detailedInfo['user_defined_status'] = 'Rejected';
+                            } elseif ($detailedInfo['status'] === 'resubmission_requested') {
+                                $detailedInfo['user_defined_status'] = 'Resubmission Needed';
+                            }
+
+                            // Person information
+                            if (isset($v['person'])) {
+                                $p                           = $v['person']; // Shorthand for person object
+                                $detailedInfo['person'] = [
+                                    'first_name'     => $p['firstName'] ?? null,
+                                    'last_name'      => $p['lastName'] ?? null,
+                                    'full_name'      => $p['fullName'] ?? null,
+                                    'date_of_birth'  => $p['dateOfBirth'] ?? null,
+                                    'year_of_birth'  => $p['yearOfBirth'] ?? null,
+                                    'place_of_birth' => $p['placeOfBirth'] ?? null,
+                                    'gender'         => $p['gender'] ?? null,
+                                    'nationality'    => $p['nationality'] ?? null,
+                                    'citizenship'    => $p['citizenship'] ?? null,
+                                    'id_number'      => $p['idNumber'] ?? null,
+                                    'occupation'     => $p['occupation'] ?? null,
+                                    'employer'       => $p['employer'] ?? null,
+                                    'title'          => $p['title'] ?? null,
+                                ];
+
+                                // Address information
+                                if (isset($p['addresses']) && ! empty($p['addresses'])) {
+                                    $address                                = $p['addresses'][0];
+                                    $detailedInfo['person']['address'] = [
+                                        'full_address' => $address['fullAddress'] ?? null,
+                                    ];
+
+                                    // Parse address components if available
+                                    if (isset($address['parsedAddress'])) {
+                                        $pa                                                     = $address['parsedAddress'];
+                                        $detailedInfo['person']['address']['city']         = $pa['city'] ?? null;
+                                        $detailedInfo['person']['address']['state']        = $pa['state'] ?? null;
+                                        $detailedInfo['person']['address']['street']       = $pa['street'] ?? null;
+                                        $detailedInfo['person']['address']['country']      = $pa['country'] ?? null;
+                                        $detailedInfo['person']['address']['postcode']     = $pa['postcode'] ?? null;
+                                        $detailedInfo['person']['address']['house_number'] = $pa['houseNumber'] ?? null;
+                                        $detailedInfo['person']['address']['unit']         = $pa['unit'] ?? null;
+                                    }
+                                }
+                            }
+
+                            // Document information
+                            if (isset($v['document'])) {
+                                $d                             = $v['document']; // Shorthand for document object
+                                $detailedInfo['document'] = [
+                                    'number'         => $d['number'] ?? null,
+                                    'type'           => $d['type'] ?? null,
+                                    'type_display'   => $this->formatDocumentType($d['type'] ?? null),
+                                    'country'        => $d['country'] ?? null,
+                                    'state'          => $d['state'] ?? null,
+                                    'valid_from'     => $d['validFrom'] ?? null,
+                                    'valid_until'    => $d['validUntil'] ?? null,
+                                    'place_of_issue' => $d['placeOfIssue'] ?? null,
+                                    'first_issue'    => $d['firstIssue'] ?? null,
+                                    'issue_number'   => $d['issueNumber'] ?? null,
+                                    'issued_by'      => $d['issuedBy'] ?? null,
+                                    'nfc_validated'  => $d['nfcValidated'] ?? null,
+                                ];
+                            }
+
+                            // Risk score information
+                            if (isset($v['riskScore'])) {
+                                $detailedInfo['risk_score'] = $v['riskScore']['score'] ?? null;
+                            }
+
+                            // Additional verified data (pick relevant fields)
+                            if (isset($v['additionalVerifiedData'])) {
+                                $avd                                  = $v['additionalVerifiedData']; // Shorthand
+                                $detailedInfo['additional_data'] = [
+                                    'estimated_age'          => $avd['estimatedAge'] ?? null,
+                                    'drivers_license_number' => $avd['driversLicenseNumber'] ?? null,
+                                ];
+
+                                // Add categories if available
+                                if (isset($avd['driversLicenseCategories'])) {
+                                    $detailedInfo['additional_data']['license_categories'] =
+                                        implode(', ', $avd['driversLicenseCategories']);
+                                }
+                            }
+                        }
+                    }
+                    $data['metadata']['verification']['detailed_info'] = $detailedInfo;
+                } else {
+                    // Session exists but not approved yet
+                    $data['metadata']['verification']['status'] = $veriffSession->status ?? 'pending';
+                }
+            }
+
             // Format address information if exists
-            if ($user->address) {
+            // Determine which address to use based on team status
+            $address = null;
+            if ($user->is_team && $user->team && $user->team->address_id) {
+                // Get address from the team if user is part of a team
+                $address = Address::find($user->team->address_id);
+            } else {
+                // Fallback to user's direct address
+                $address = $user->address;
+            }
+
+// Format address information if exists
+            if ($address) {
+                $tenancyAgreementUrl = null;
+                if ($address->tenancyAgreement) {
+                    $tenancyAgreementUrl = asset('storage/' . $address->tenancyAgreement);
+                }
+
                 $data['address'] = [
-                    'name'                    => $user->address->name,
-                    'province'                => $user->address->province,
-                    'city'                    => $user->address->city,
-                    'street_name'             => $user->address->street_name,
-                    'postal_code'             => $user->address->postal_code,
-                    'house_number'            => $user->address->house_number,
-                    'unit_number'             => $user->address->unit_number,
-                    'amount'                  => $user->address->amount,
-                    'reoccurring_monthly_day' => $user->address->reoccurring_monthly_day,
-                    'duration_from'           => $user->address->duration_from,
-                    'duration_to'             => $user->address->duration_to,
-                    'tenancy_agreement'       => $user->address->tenancyAgreement,
-                    'edit_count'              => $user->address->edit_count,
-                    'last_edit_date'          => $user->address->last_edit_date ? $user->address->last_edit_date->format('d M Y, h:i A') : null,
+                    'name'                    => $address->name,
+                    'province'                => $address->province,
+                    'city'                    => $address->city,
+                    'street_name'             => $address->street_name,
+                    'postal_code'             => $address->postal_code,
+                    'house_number'            => $address->house_number,
+                    'unit_number'             => $address->unit_number,
+                    'amount'                  => $address->amount,
+                    'reoccurring_monthly_day' => $address->reoccurring_monthly_day,
+                    'duration_from'           => $address->duration_from,
+                    'duration_to'             => $address->duration_to,
+                    'tenancy_agreement'       => $tenancyAgreementUrl, // Full URL to the file
+                    'edit_count'              => $address->edit_count,
+                    'last_edit_date'          => $address->last_edit_date ? $address->last_edit_date->format('d M Y, h:i A') : null,
                 ];
 
                 // Format address and landlord/financer details if exists
-                if ($user->address->landlordFinanceDetails->isNotEmpty()) {
-                    $details = $user->address->landlordFinanceDetails->first()->details;
+                if ($address->landlordFinanceDetails->isNotEmpty()) {
+                    $details = $address->landlordFinanceDetails->first()->details;
                     // Parse the JSON details
                     $parsedDetails = json_decode($details, true);
 
                     $data['finance_details'] = [
                         'type'           => $user->account_goal, // 'rent' or 'mortgage'
-                        'payment_method' => $user->address->landlordFinanceDetails->first()->payment_method,
+                        'payment_method' => $address->landlordFinanceDetails->first()->payment_method,
                         'details'        => $parsedDetails,
                         'display_title'  => $user->account_goal === 'mortgage' ? 'Mortgage Financer' : 'Landlord',
                     ];
@@ -172,30 +353,30 @@ class UserController extends Controller
                             $userData = User::select('first_name', 'last_name')
                                 ->find($member->user_id);
                         }
-            
+
                         return [
-                            'name' => $userData 
-                                ? $userData->first_name . ' ' . $userData->last_name 
-                                : $member->name,
-                            'email' => $member->email,
-                            'role' => $member->role,
-                            'status' => $member->status,
-                            'amount' => $member->amount,
-                            'percentage' => $member->percentage,
+                            'name'              => $userData
+                            ? $userData->first_name . ' ' . $userData->last_name
+                            : $member->name,
+                            'email'             => $member->email,
+                            'role'              => $member->role,
+                            'status'            => $member->status,
+                            'amount'            => $member->amount,
+                            'percentage'        => $member->percentage,
                             'invitation_status' => [
-                                'token' => $member->invitation_token,
-                                'expires_at' => $member->invitation_expires_at 
-                                    ? Carbon::parse($member->invitation_expires_at)->format('d M Y, h:i A') 
-                                    : null,
-                                'declined_at' => $member->declined_at 
-                                    ? Carbon::parse($member->declined_at)->format('d M Y, h:i A') 
-                                    : null,
-                            ],            
-                            'is_registered' => $member->user_id ? true : false
+                                'token'       => $member->invitation_token,
+                                'expires_at'  => $member->invitation_expires_at
+                                ? Carbon::parse($member->invitation_expires_at)->format('d M Y, h:i A')
+                                : null,
+                                'declined_at' => $member->declined_at
+                                ? Carbon::parse($member->declined_at)->format('d M Y, h:i A')
+                                : null,
+                            ],
+                            'is_registered'     => $member->user_id ? true : false,
                         ];
                     });
             }
-            
+
             // Format credit cards information
             $data['credit_cards'] = $user->cards->map(function ($card) {
                 return [
@@ -225,6 +406,55 @@ class UserController extends Controller
                     ];
                 });
 
+            // Format wallet information
+            if ($user->wallet) {
+                $data['wallet'] = [
+                    'balance' => $user->wallet->balance ?? 0,
+                    'uuid'    => $user->wallet->uuid,
+                ];
+
+                // Get recent wallet transactions
+                $data['wallet_transactions'] = $user->wallet->transactions()
+                    ->latest()
+                    ->take(10)
+                    ->get()
+                    ->map(function ($transaction) {
+                        // Get the user for the transaction to display decrypted names
+                        $transactionUser = User::find($transaction->user_id);
+                        $userName        = $transactionUser ?
+                        $transactionUser->first_name . ' ' . $transactionUser->last_name :
+                        'Unknown User';
+
+                        return [
+                            'id'        => $transaction->id,
+                            'uuid'      => $transaction->uuid,
+                            'type'      => $transaction->type,
+                            'amount'    => $transaction->amount,
+                            'charge'    => $transaction->charge,
+                            'status'    => $transaction->status,
+                            'date'      => $transaction->created_at->format('d M Y, h:i A'),
+                            'user_name' => $userName,
+                            'details'   => json_decode($transaction->details), // If details are stored as JSON
+                        ];
+                    });
+
+                // Get wallet allocations if they exist
+                if (method_exists($user->wallet, 'allocations')) {
+                    $data['wallet_allocations'] = $user->wallet->allocations()
+                        ->with('bill') // Eager load bill relationship
+                        ->get()
+                        ->map(function ($allocation) {
+                            return [
+                                'uuid'             => $allocation->uuid,
+                                'allocated_amount' => $allocation->allocated_amount,
+                                'spent_amount'     => $allocation->spent_amount,
+                                'remaining_amount' => $allocation->remaining_amount,
+                                'bill'             => $allocation->bill,
+                            ];
+                        });
+                }
+            }
+
             $data['tickets'] = [
                 'total_tickets'  => $user->tickets->count(),
                 'recent_tickets' => $user->tickets()
@@ -233,15 +463,18 @@ class UserController extends Controller
                     ->get()
                     ->map(function ($ticket) {
                         return [
-                            'id'         => $ticket->id,
-                            'title'      => $ticket->title,
-                            'status'     => $ticket->status,
-                            'created_at' => $ticket->created_at->format('d M Y, h:i A'),
+                            'id'          => $ticket->id,
+                            'uuid'        => $ticket->uuid,
+                            'subject'     => $ticket->subject,
+                            'description' => $ticket->description,
+                            'status'      => $ticket->status,
+                            'created_at'  => $ticket->created_at->format('d M Y, h:i A'),
                         ];
                     }),
             ];
 
             // dd($data, $user->teamMembers, $user->team->teamMembers);
+            // dd($data);
 
             return view('admin.dashboard.user-view', $data);
 
@@ -251,6 +484,99 @@ class UserController extends Controller
             return redirect()
                 ->route('admin.dashboard')
                 ->with('error', 'An error occurred while fetching user details. Please try again.');
+        }
+    }
+
+    private function formatDocumentType($docType)
+    {
+        if (empty($docType)) {
+            return 'Unknown Document';
+        }
+
+        $types = [
+            'DRIVERS_LICENSE'  => "Driver's License",
+            'ID_CARD'          => "Government ID Card",
+            'PASSPORT'         => "Passport",
+            'RESIDENCE_PERMIT' => "Residence Permit",
+            'VISA'             => "Visa",
+        ];
+
+        return $types[$docType] ?? ucwords(strtolower(str_replace('_', ' ', $docType)));
+    }
+
+    public function getWalletHistory($uuid)
+    {
+        try {
+            // Check if it's an AJAX request
+            if (! request()->ajax()) {
+                return redirect()->route('admin.dashboard');
+            }
+            $wallet = Wallet::where('uuid', $uuid)->firstOrFail();
+
+            // Get all transactions for this wallet with pagination
+            $transactions = $wallet->transactions()
+                ->with('user') // Eager load user relationship
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($transaction) {
+                    // Parse details to get card_id and service_id (bill_id)
+                    $details = json_decode($transaction->details, true) ?: [];
+
+                    // Get card details if card_id exists
+                    $card = null;
+                    if (isset($details['card_id'])) {
+                        $card = Card::find($details['card_id']);
+                    }
+
+                    // Get bill/service details if allocation_id or service_id exists
+                    $bill = null;
+                    if (isset($details['allocation_id'])) {
+                        $allocation = WalletAllocation::find($details['allocation_id']);
+                        if ($allocation && $allocation->bill_id) {
+                            $bill = Bill::find($allocation->bill_id);
+                        }
+                    } elseif (isset($details['service_id'])) {
+                        $bill = Bill::find($details['service_id']);
+                    }
+
+                    // Format the transaction data
+                    return [
+                        'id'        => $transaction->id,
+                        'uuid'      => $transaction->uuid,
+                        'type'      => $transaction->type,
+                        'amount'    => $transaction->amount,
+                        'charge'    => $transaction->charge,
+                        'status'    => $transaction->status,
+                        'date'      => $transaction->created_at->format('d M Y, h:i A'),
+                        'user_name' => $transaction->user ?
+                        $transaction->user->first_name . ' ' . $transaction->user->last_name :
+                        'Unknown User',
+                        'details'   => $details,
+                        'card'      => $card ? [
+                            'id'         => $card->id,
+                            'number'     => $card->card_number,
+                            'type'       => $card->type,
+                            'expiry'     => $card->expiry_month . '/' . $card->expiry_year,
+                            'is_primary' => $card->is_primary,
+                        ] : null,
+                        'bill'      => $bill ? [
+                            'id'     => $bill->id,
+                            'name'   => $bill->name,
+                            'value'  => $bill->value,
+                            'status' => $bill->status,
+                        ] : null,
+                    ];
+                });
+
+            // dd($transactions);
+
+            // Return a partial view with just the transaction table
+            return view('admin.dashboard.view-wallet', [
+                'transactions' => $transactions,
+                'wallet'       => $wallet,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
@@ -328,59 +654,59 @@ class UserController extends Controller
     }
 
     public function approveUser($uuid)
-{
-    try {
-        $user = User::where('uuid', $uuid)->firstOrFail();
-        $user->status = 'active';
-        $user->save();
+    {
+        try {
+            $user         = User::where('uuid', $uuid)->firstOrFail();
+            $user->status = 'active';
+            $user->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User has been approved successfully.'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error approving user: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'message' => 'User has been approved successfully.',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error approving user: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
-public function rejectUser($uuid)
-{
-    try {
-        $user = User::where('uuid', $uuid)->firstOrFail();
-        $user->status = 'rejected';
-        $user->save();
+    public function rejectUser($uuid)
+    {
+        try {
+            $user         = User::where('uuid', $uuid)->firstOrFail();
+            $user->status = 'rejected';
+            $user->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User has been rejected successfully.'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error rejecting user: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'message' => 'User has been rejected successfully.',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error rejecting user: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
-public function deleteUser($uuid)
-{
-    try {
-        $user = User::where('uuid', $uuid)->firstOrFail();
-        $user->delete();
+    public function deleteUser($uuid)
+    {
+        try {
+            $user = User::where('uuid', $uuid)->firstOrFail();
+            $user->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User has been deleted successfully.'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error deleting user: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'message' => 'User has been deleted successfully.',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting user: ' . $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
 }

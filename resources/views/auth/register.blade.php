@@ -43,7 +43,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
     <!-- Replace with your favicon URL -->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/favicon/apple-touch-icon.png') }}">
     <!-- Replace with your favicon URL -->
-    <link rel="manifest" href="https://yourwebsite.com/manifest.json">
+    {{-- <link rel="manifest" href="https://yourwebsite.com/manifest.json"> --}}
 
     <!-- Robots -->
     <meta name="robots" content="index, follow">
@@ -109,7 +109,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
 
 
         .error-message {
-            font-family: 'Kodchasan';
+            font-family: 'Kodchasan' !important;
             letter-spacing: 1px;
             color: red;
             font-weight: 600;
@@ -428,6 +428,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
         }
     </style>
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/css/verify.css') }}" rel="stylesheet" type="text/css" />
     {{-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css"> --}}
 
     <!-- Toast Container -->
@@ -718,6 +719,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
 
     <!--begin::Root-->
     <div class="d-flex flex-column flex-root" id="kt_app_root">
+
         <!--begin::Authentication - Multi-steps-->
         <div class="d-flex flex-column flex-lg-row flex-column-fluid stepper stepper-pills stepper-column stepper-multistep"
             id="kt_create_account_stepper">
@@ -926,6 +928,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
             <!--begin::Aside-->
             <!--begin::Body-->
             <div class="d-flex flex-column flex-lg-row-fluid py-10">
+                {{-- <button id="testSuccessModal" class="btn btn-sm btn-primary">Test Success Modal</button> --}}
                 <!--begin::Content-->
                 <div class="stepper">
                     <div class="d-flex flex-center flex-column flex-column-fluid">
@@ -1961,8 +1964,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                     </div>
                                 </div>
 
-                                <div id="MortgageStep4"
-                                    class="Rent_mortgage_divs wizardForm substep MortgageDivTagStep">
+                                <div id="MortgageStep4" class="Rent_mortgage_divs wizardForm substep MortgageDivTagStep">
                                     <div class="pb-10 pb-lg-5">
                                         <!--begin::Title-->
                                         <h2 class="fw-bold text-gray-900">Add Co-owner</h2>
@@ -1973,7 +1975,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                             <label class="form-label fw-bold text-gray-900 required">Owner primary
                                                 mortgage percentage:</label>
                                             <input type="number" id="coApplicanMortgagePrimaryAmount"
-                                                onblur="validatePercentageInput(this)" required
+                                                onblur="validateMortgagePercentageInput(this)" required
                                                 name="coApplicanMortgagePrimaryAmount"
                                                 class="form-control mb-2 mb-md-0"
                                                 placeholder="Enter percentage (1-100)" min="1" max="100">
@@ -2018,7 +2020,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                             class="form-control mb-2 mb-md-0"
                                                             placeholder="Enter first name" required>
                                                         <span class="error-message"
-                                                            data-error-id="mortgagecoOwnerfirstName"></span>
+                                                            data-error-id="mortgagecoOwnerfirstNameError"></span>
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="form-label fw-bold text-gray-900">Last
@@ -2027,7 +2029,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                             class="form-control mb-2 mb-md-0"
                                                             placeholder="Enter last name" required>
                                                         <span class="error-message"
-                                                            data-error-id="mortgagecoOwnerlastName"></span>
+                                                            data-error-id="mortgagecoOwnerlastNameError"></span>
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="form-label fw-bold text-gray-900">Email:</label>
@@ -2035,19 +2037,19 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                             class="form-control mb-2 mb-md-0"
                                                             placeholder="Enter email address" required>
                                                         <span class="error-message"
-                                                            data-error-id="mortgagecoOwneremail"></span>
+                                                            data-error-id="mortgagecoOwneremailError"></span>
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="form-label fw-bold text-gray-900">Percentage
                                                             Amount:</label>
                                                         <input type="number" id="mortgagecoOwneramount[]"
-                                                            onblur="validatePercentageInput(this)" required
+                                                            onblur="validateMortgagePercentageInput(this)" required
                                                             name="mortgagecoOwneramount[]"
                                                             class="form-control mb-2 mb-md-0"
                                                             placeholder="Enter percentage (1-100)" min="1"
                                                             max="100">
                                                         <span class="error-message"
-                                                            data-error-id="mortgagecoOwneramount"></span>
+                                                            data-error-id="mortgagecoOwneramountError"></span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2109,7 +2111,7 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                             <div class="mb-10 fv-row">
                                                 <label
                                                     class="form-label fw-bold text-gray-900 mb-3 required">City</label>
-                                                <select id="city" required class="form-select form-select-solid">
+                                                <select id="city" name="city" required class="form-select form-select-solid">
                                                     <option value="">--Select a City--</option>
                                                 </select>
                                                 <span class="error-message" data-error-id="cityError"></span>
@@ -2765,16 +2767,81 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                         <!--begin::Heading-->
                                         <div class="pb-10 pb-lg-15">
                                             <!--begin::Title-->
-                                            <h2 class="fw-bold text-gray-900">Verification with Plaid </h2>
+                                            <h2 class="fw-bold text-gray-900">Verification with Verrif</h2>
                                             <!--end::Title-->
                                             <!--begin::Notice-->
                                             <div class="text-muted fw-semibold fs-6">
-                                                Kindly scroll through the terms and conditions and click on the check
-                                                box.
+                                                Kindly scroll through the terms and conditions and click on the check box.
                                             </div>
                                             <!--end::Notice-->
+                                        
+                                            <!-- Form Fields Section -->
+                                            <div class="mt-10">
+                                                <form id="verify-form" onsubmit="return submitVerifyForm(event)">
+                                                    <!-- Hidden fields for required controller data -->
+                                                    <div class="row mb-4">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">National identification number</label>
+                                                            <input type="text" class="form-control" name="verify_idNumber" value="123456789" oninput="clearVerifyFieldError(this)">
+                                                            <div class="invalid-feedback" style="display:none;"></div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Country</label>
+                                                            <input type="text" class="form-control" name="verify_country" placeholder="Canada (CA)" readonly value="Canada (CA)">
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-4">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Document Type</label>
+                                                            <select class="form-select" name="verify_type" oninput="clearVerifyFieldError(this)">
+                                                                <option value="PASSPORT" selected>PASSPORT</option>
+                                                                <option value="ID_CARD">ID CARD</option>
+                                                                <option value="RESIDENCE_PERMIT">RESIDENCE PERMIT</option>
+                                                                <option value="DRIVERS_LICENSE">DRIVERS LICENSE</option>
+                                                                <option value="VISA">VISA</option>
+                                                            </select>
+                                                            <div class="invalid-feedback" style="display:none;"></div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Document Number</label>
+                                                            <input type="text" class="form-control" name="verify_number" value="B01234567" oninput="clearVerifyFieldError(this)">
+                                                            <div class="invalid-feedback" style="display:none;"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-4">
+                                                        <div class="col-12">
+                                                            <label class="form-label">Full Address</label>
+                                                            <input type="text" class="form-control" name="verify_fullAddress" placeholder="Start typing to search for an address..." oninput="clearVerifyFieldError(this)">
+                                                            <div class="invalid-feedback" style="display:none;"></div>
+                                                            <div class="form-text">Enter your full address or use the autocomplete suggestions</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Terms Agreement Checkbox with Improved Error Display -->
+<div class="fv-row mb-5">
+    <div class="position-relative">
+        <label class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="verify_terms" id="verifyAgreeCheckbox" value="1" oninput="clearVerifyFieldError(this)">
+            <span class="form-check-label fw-semibold text-gray-700 fs-6">
+                I Agree to the <a href="#" class="" style="color: green; font-weight: 600;">Terms and conditions</a>
+            </span>
+        </label>
+        <div class="invalid-feedback" style="display:none; margin-top: 0.25rem;"></div>
+    </div>
+</div>
+                                                    <!-- Button - positioned to the right -->
+                                                    <div class="text-end">
+                                                        <button type="button" id="verifyProceedButton" class="btn btn-lg btn-primary verifyProceedButton" onclick="submitVerifyForm(event)">
+                                                            Proceed with verification
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+
+                                        
                                             <!-- Terms and Conditions Container -->
-                                            <div id="termsContainer" class="mt-10">
+                                            {{-- <div id="termsContainer" class="mt-10">
                                                 <h3>Terms and Conditions</h3>
                                                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla at
                                                     ipsum orci. Vivamus mollis tortor nec quam condimentum, non
@@ -2790,7 +2857,6 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                     tempor.</p>
                                                 <p>Ut sit amet massa in urna auctor cursus. Vivamus lacinia lacinia
                                                     arcu, vel pulvinar lectus.</p>
-                                                <!-- Add more terms content here as needed -->
 
                                                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla at
                                                     ipsum orci. Vivamus mollis tortor nec quam condimentum, non
@@ -2799,13 +2865,11 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                 <p>Curabitur at lacinia sem, in auctor orci. Suspendisse quis metus
                                                     euismod, faucibus libero nec, fermentum erat. Nam scelerisque
                                                     neque a urna sagittis vehicula.</p>
-                                                <!-- Add more text as needed -->
                                                 <p>Sed consequat leo eu magna convallis varius. Suspendisse potenti.
                                                     Aenean viverra risus felis, eget interdum enim ultricies ac.</p>
                                                 <p>In at eros non ipsum venenatis vehicula. Nam laoreet semper
                                                     metus, sed dictum ligula scelerisque eu. Mauris quis tortor nec
                                                     est commodo tempor.</p>
-                                                <!-- Add more text as needed -->
                                             </div>
 
                                             <div
@@ -2821,16 +2885,10 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                 </label>
                                             </div>
                                             <div class="terms-footer">
-                                                {{-- <input type="checkbox" class="form-check-input form-check-input-new"
-                                                    id="agreeCheckbox" > I agree to the Terms and
-                                                Conditions<br> --}}
                                                 <button type="button" id="proceedButton"
                                                     class="btn btn-sm mt-1 btn-lg btn-primary">Proceed with
                                                     verification</button>
-                                            </div>
-
-                                        </div>
-                                        <!--end::Heading-->
+                                            </div> --}}
                                     </div>
                                     <!--end::Wrapper-->
                                 </div>
@@ -3034,8 +3092,10 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
     {{-- <script src="{{ asset('assets/js/new-js.js') }}"></script> --}}
     {{-- <script src="{{ asset('assets/js/step.js') }}"></script> --}}
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
-    <script src="{{ asset('assets/js/terms-condition.js') }}"></script>
+    {{-- <script src="{{ asset('assets/js/terms-condition.js') }}"></script> --}}
+    <script src="{{ asset('assets/js/verify.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+    <script src="{{ asset('assets/js/csrf-refresh.js') }}"></script>
     <!--end::Javascript-->
 </body>
 <!--end::Body-->

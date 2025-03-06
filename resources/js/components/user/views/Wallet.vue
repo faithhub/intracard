@@ -48,7 +48,7 @@
                                                     <v-list-item-title class="d-flex justify-space-between">
                                                         <span>Total Transactions</span>
                                                         <span class="font-weight-bold">{{ quickStats.totalTransactions
-                                                        }}</span>
+                                                            }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
 
@@ -65,7 +65,7 @@
                                                         <span>Total Charges</span>
                                                         <span class="font-weight-bold">{{
                                                             formatAmount(quickStats.totalCharges)
-                                                        }}</span>
+                                                            }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
 
@@ -74,7 +74,7 @@
                                                         <span>Total Allocated</span>
                                                         <span class="font-weight-bold">{{
                                                             formatAmount(quickStats.totalAllocated)
-                                                        }}</span>
+                                                            }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
 
@@ -83,7 +83,7 @@
                                                         <span>Available Balance</span>
                                                         <span class="font-weight-bold">{{
                                                             formatAmount(quickStats.availableBalance)
-                                                        }}</span>
+                                                            }}</span>
                                                     </v-list-item-title>
                                                 </v-list-item>
                                             </v-list>
@@ -94,80 +94,64 @@
                         </v-expand-transition>
 
                         <!-- Transactions -->
-                        <div class="card mb-5 mb-xl-12">
-                            <!--begin::Card header-->
-                            <div class="card-header card-header-stretch pb-0">
-                                <!--begin::Title-->
-                                <div class="card-title">
-                                    <h3 class="m-0">Transactions</h3>
-                                </div>
-                            </div>
+                        <!-- Replace the existing transactions table section with this Vuetify implementation -->
 
-                            <div class="card-body pt-0">
-                                <div class="table-responsive">
-                                    <table class="table align-middle table-row-dashed fs-6 gy-5" id="transactionTable">
-                                        <thead>
-                                            <tr class="text-start text-gray-500 fw-bold fs-7 text-uppercase" width="3">
-                                                <!-- Checkbox Column -->
-                                                <th class="w-5 pe-2 dt-orderable-none">
-                                                    <span class="dt-column-title">
-                                                        <div
-                                                            class="form-check form-check-sm form-check-custom form-check-solid me-3">
-                                                            <input class="form-check-input" type="checkbox"
-                                                                data-kt-check="true"
-                                                                data-kt-check-target="#transactionTable .form-check-input"
-                                                                value="1">
-                                                        </div>
-                                                    </span>
-                                                </th>
-                                                <th width="17%">Transaction ID</th>
-                                                <th width="17%">Date</th>
-                                                <th width="15%">Amount</th>
-                                                <th width="10%">Bill Type</th>
-                                                <th width="18%">Transaction Type</th>
-                                                <th width="5%">Status</th>
-                                                <th class="text-end" width="10%">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="transaction in transactions" :key="transaction.uuid">
-                                                <td>
-                                                    <div
-                                                        class="form-check form-check-sm form-check-custom form-check-solid">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            :value="transaction.uuid">
-                                                    </div>
-                                                </td>
-                                                <td>{{ transaction.uuid }}</td>
-                                                <td>{{ formatDate(transaction.created_at) }}</td>
-                                                <td>{{ formatAmount(transaction.amount) }}</td>
-                                                <td>{{ transaction.service_name }}</td>
-                                                <td>
-                                                    <span :class="getTransactionTypeClass(transaction.type)">
-                                                        {{ transaction.type === 'inbound' ? 'Inbound' : 'Outbound'
-                                                        }}&nbsp;
-                                                        <i :class="getTransactionIconClass(transaction.type)"></i>
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span :class="getStatusClass(transaction.status)">
-                                                        {{ capitalizeFirstLetter(transaction.status) }}
-                                                    </span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <button class="btn btn-sm btn-light-primary btn-view-wallet"
-                                                        data-bs-toggle="modal" data-bs-target="#transactionDetailsModal"
-                                                        @click="showTransactionDetails(transaction)">
-                                                        View
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
+                        <!-- Transactions -->
+                        <v-card class="mb-5 mb-xl-12">
+                            <v-card-title class="pb-0">
+                                <h3 class="m-0">Transactions</h3>
+                            </v-card-title>
 
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                            <v-card-text class="pt-0">
+                                <v-data-table :headers="transactionHeaders" :items="transactions" :items-per-page="5"
+                                    :footer-props="{
+                                        'items-per-page-options': [5, 10, 15, 20],
+                                        'show-current-page': true,
+                                        'show-first-last-page': true
+                                    }" item-key="uuid" class="elevation-0">
+                                    <!-- Custom rendering for Transaction ID column -->
+                                    <template v-slot:item.uuid="{ item }">
+                                        {{ item.uuid }}
+                                    </template>
+
+                                    <!-- Custom rendering for Date column -->
+                                    <template v-slot:item.created_at="{ item }">
+                                        {{ formatDate(item.created_at) }}
+                                    </template>
+
+                                    <!-- Custom rendering for Amount column -->
+                                    <template v-slot:item.amount="{ item }">
+                                        {{ formatAmount(item.amount) }}
+                                    </template>
+
+                                    <!-- Custom rendering for Transaction Type column -->
+                                    <template v-slot:item.type="{ item }">
+                                        <v-chip :color="item.type === 'inbound' ? 'light-green' : 'orange-lighten-1'"
+                                            small class="px-2 py-1 ">
+                                            {{ item.type === 'inbound' ? 'Inbound' : 'Outbound' }}
+                                            <v-icon size="small" class="ml-1">
+                                                {{ item.type === 'inbound' ? 'mdi-arrow-down' : 'mdi-arrow-up' }}
+                                            </v-icon>
+                                        </v-chip>
+                                    </template>
+
+                                    <!-- Custom rendering for Status column -->
+                                    <template v-slot:item.status="{ item }">
+                                        <v-chip :color="getStatusChipColor(item.status)" small>
+                                            {{ capitalizeFirstLetter(item.status) }}
+                                        </v-chip>
+                                    </template>
+
+                                    <!-- Custom rendering for Actions column -->
+                                    <template v-slot:item.actions="{ item }">
+                                        <v-btn color="deep-purple" variant="text" size="small"
+                                            @click="showTransactionDetails(item)">
+                                            View
+                                        </v-btn>
+                                    </template>
+                                </v-data-table>
+                            </v-card-text>
+                        </v-card>
                     </div>
                 </v-card>
             </v-col>
@@ -219,7 +203,7 @@
                                     <span class="font-weight-bold me-2">Type:</span>
                                 </template>
                                 <v-list-item-title>{{ capitalizeFirstLetter(selectedTransaction.type)
-                                }}</v-list-item-title>
+                                    }}</v-list-item-title>
                             </v-list-item>
 
                             <v-list-item>
@@ -227,7 +211,7 @@
                                     <span class="font-weight-bold me-2">Status:</span>
                                 </template>
                                 <v-list-item-title>{{ capitalizeFirstLetter(selectedTransaction.status)
-                                }}</v-list-item-title>
+                                    }}</v-list-item-title>
                             </v-list-item>
 
                             <v-list-item>
@@ -237,12 +221,12 @@
                                 <v-list-item-title>{{ formatAmount(selectedTransaction.charge) }}</v-list-item-title>
                             </v-list-item>
 
-                            <v-list-item>
+                            <!-- <v-list-item>
                                 <template v-slot:prepend>
                                     <span class="font-weight-bold me-2">Details:</span>
                                 </template>
                                 <v-list-item-title>{{ selectedTransaction.details }}</v-list-item-title>
-                            </v-list-item>
+                            </v-list-item> -->
                         </v-list>
                     </v-card-text>
 
@@ -275,7 +259,7 @@
                                 <div class="d-flex justify-space-between mb-1">
                                     <span class="text-body-2">Amount:</span>
                                     <span class="text-body-2">{{ formatToCAD(parseFloat(fundWallet.amount).toFixed(2))
-                                    }}</span>
+                                        }}</span>
                                 </div>
                                 <div class="d-flex justify-space-between mb-1">
                                     <span class="text-body-2">Charges (5%):</span>
@@ -285,7 +269,7 @@
                                 <div class="d-flex justify-space-between">
                                     <span class="text-body-1 font-weight-bold">Total:</span>
                                     <span class="text-body-1 font-weight-bold">{{ formatToCAD(totalAmount.toFixed(2))
-                                    }}</span>
+                                        }}</span>
                                 </div>
                             </div>
 
@@ -486,6 +470,15 @@ export default {
             fundWalletErrors: {}, // Validation errors
             isSubmitting: false, // Tracks form submission state
             cards: [],
+            transactionHeaders: [
+                { title: 'Transaction ID', key: 'uuid', width: '17%' },
+                { title: 'Date', key: 'created_at', width: '17%' },
+                { title: 'Amount', key: 'amount', width: '15%' },
+                { title: 'Bill Type', key: 'service_name', width: '10%' },
+                { title: 'Transaction Type', key: 'type', width: '18%' },
+                { title: 'Status', key: 'status', width: '5%' },
+                { title: 'Actions', key: 'actions', width: '10%', sortable: false, align: 'end' }
+            ],
             billTypes: [], // Holds the bill types fetched from the server
             transactionCharges: 0, // Stores calculated charges
             totalAmount: 0, // Total amount (amount + charges)
@@ -532,6 +525,24 @@ export default {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
             }).format(amount);
+        },
+        // Add this method to your methods section
+        getStatusChipColor(status) {
+            switch (status.toLowerCase()) {
+                case 'completed':
+                    return 'light-green';
+                case 'pending':
+                    return 'amber';
+                case 'failed':
+                    return 'red';
+                default:
+                    return 'grey';
+            }
+        },
+
+        // Your existing methods can stay as is
+        capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
         },
         calculateCharges() {
             // Clear previous errors

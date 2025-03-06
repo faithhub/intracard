@@ -139,14 +139,17 @@ function createAutoReply(url, title = "Operation", size, type = "") {
                             type: form.attr("method"), // Use the form method (POST)
                             data: formData,
                             headers: {
-                                "X-CSRF-TOKEN": $(
-                                    'meta[name="csrf-token"]'
-                                ).attr("content"), // Include CSRF token
+                                "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content"), // Include CSRF token
                             },
                             success: function (response) {
                                 $.alert({
                                     title: "Success",
                                     content: "Auto-reply created successfully!",
+                                    buttons: {
+                                        ok: function() {
+                                            location.reload(); // Reload the page
+                                        }
+                                    }
                                 });
                                 jesus.close(); // Close the dialog
                             },
@@ -154,8 +157,7 @@ function createAutoReply(url, title = "Operation", size, type = "") {
                                 console.log("Error:", error);
                                 $.alert({
                                     title: "Error",
-                                    content:
-                                        "Failed to create auto-reply. Please try again.",
+                                    content: "Failed to create auto-reply. Please try again.",
                                 });
                             },
                         });
@@ -177,15 +179,6 @@ function createAutoReply(url, title = "Operation", size, type = "") {
         containerFluid: true,
         draggable: true,
         backgroundDismiss: false,
-        // defaultButtons: {
-        //     ok: {
-        //         action: function () {},
-        //     },
-        //     close: {
-        //         action: function () {},
-        //     },
-        // },
-        //type:type
     });
 }
 
@@ -235,6 +228,11 @@ function editAutoReply(url, title = "Operation", size, type = "") {
                                 $.alert({
                                     title: "Success",
                                     content: "Auto-reply updated successfully!",
+                                    buttons: {
+                                        ok: function() {
+                                            location.reload(); // Reload the page
+                                        }
+                                    }
                                 });
                                 jesus.close(); // Close the dialog
                             },
@@ -264,15 +262,6 @@ function editAutoReply(url, title = "Operation", size, type = "") {
         containerFluid: true,
         draggable: true,
         backgroundDismiss: false,
-        // defaultButtons: {
-        //     ok: {
-        //         action: function () {},
-        //     },
-        //     close: {
-        //         action: function () {},
-        //     },
-        // },
-        //type:type
     });
 }
 

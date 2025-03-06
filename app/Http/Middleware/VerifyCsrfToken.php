@@ -14,5 +14,10 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         // Add any routes you want to exclude from CSRF protection
         // 'api/*'
+        '/veriff/start',
+        '/veriff/callback',
+        '/veriff/status/*'
+
     ];
+    
 }

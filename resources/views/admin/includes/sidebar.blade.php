@@ -76,8 +76,8 @@
 
                     <!-- CB Reporting (Restricted by Role) -->
                     @if(Auth::guard('admin')->user()->can('access-support'))
-                        <div data-kt-menu-trigger="click"
-                            class="menu-link menu-link-sidebar d-flex align-items-center py-3 px-4 mb-2 {{ Request::is('admin/equifax-report') || Request::is('admin/transunion-report') ? 'hover show' : '' }}">
+                    <div class="menu-item menu-accordion p-0" data-kt-menu-trigger="click">
+                        <span class="menu-link menu-link-sidebar d-flex align-items-center py-3 px-4 mb-2 {{ Request::is('admin/equifax-report') || Request::is('admin/transunion-report') ? 'active' : '' }}">
                             <span class="menu-icon">
                                 <i class="fa fa-database fs-2">
                                     <span class="path1"></span>
@@ -86,30 +86,31 @@
                                 </i>
                             </span>
                             <span class="menu-title ms-3 fs-6 fw-bold">CB Reporting</span>
-                            <span class="menu-arrow ms-auto"></span>
-                        </div>
-                    @endif
-
-                    <div class="menu-sub menu-sub-accordion px-4 {{ Request::is('admin/equifax-report') || Request::is('admin/transunion-report') ? 'show' : '' }}">
-                        <div class="menu-item">
-                            <a class="menu-link menu-link-sidebar py-3 {{ Request::is('admin/equifax-report') ? 'active' : '' }}"
-                                href="{{ route('admin.report.equifax') }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title ms-2">Equifax</span>
-                            </a>
-                        </div>
-                        <div class="menu-item">
-                            <a class="menu-link menu-link-sidebar py-3 {{ Request::is('admin/transunion-report') ? 'active' : '' }}"
-                                href="{{ route('admin.report.transunion') }}">
-                                <span class="menu-bullet">
-                                    <span class="bullet bullet-dot"></span>
-                                </span>
-                                <span class="menu-title ms-2">TransUnion</span>
-                            </a>
+                            <span class="menu-arrow"></span>
+                        </span>
+                
+                        <div class="menu-sub menu-sub-accordion px-1 {{ Request::is('admin/equifax-report') || Request::is('admin/transunion-report') ? 'show' : '' }}">
+                            <div class="menu-item">
+                                <a class="menu-link menu-link-sidebar py-1 m-0 {{ Request::is('admin/equifax-report') ? 'active' : '' }}"
+                                    href="{{ route('admin.report.equifax') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title ms-2">Equifax</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link menu-link-sidebar py-1 m-0 {{ Request::is('admin/transunion-report') ? 'active' : '' }}"
+                                    href="{{ route('admin.report.transunion') }}">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title ms-2">TransUnion</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
+                @endif
 
                     <!-- Transactions -->
                     @if(Auth::guard('admin')->user()->can('access-finance'))
@@ -154,7 +155,7 @@
                     <!-- Settings -->
                     @if(Auth::guard('admin')->user()->can('access-all'))
                         <a class="menu-link menu-link-sidebar {{ Request::is('admin/settings') ? 'active' : '' }}"
-                            href="{{ route('admin.settings') }}">
+                            href="{{ route('admin.settings.index') }}">
                             <span class="menu-icon"><i class="fa-brands fa-rocketchat">
                                     <span class="path1"></span><span class="path2"></span></i>
                             </span>

@@ -215,23 +215,24 @@
                                             </a>
                                         </div>
 
-                                        <div class="menu-item px-3">
-                                            <a href="" class="menu-link px-3 btn">
-                                                Edit
-                                            </a>
-                                        </div>
-                                        <!--end::Menu item-->
 
                                         <!--begin::Menu item-->
                                         <div class="menu-item px-3">
-                                            <a href="#" class="menu-link px-3 btn"
-                                                data-kt-users-table-filter="delete_row">
-                                                Delete
-                                            </a>
+                                            <button type="button" class="menu-link px-3"
+                                            style="border:0; background:none; width:100%; text-align:left;"
+                                            onclick="confirmDelete('{{ $user->uuid }}', '{{ $user->first_name }} {{ $user->last_name }}')">
+                                            Delete
+                                        </button>
                                         </div>
                                         <!--end::Menu item-->
                                     </div>
                                     <!--end::Menu-->
+                                    <form id="delete-form-{{ $user->uuid }}"
+                                            action="{{ route('admin.users.destroy', $user->uuid) }}" method="POST"
+                                            class="d-none">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
                                 </td>
                             </tr>
                         @endforeach
@@ -261,6 +262,336 @@
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css">
+
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header py-5 px-4 border-1">
+                    <h5 class="modal-title px-3 fs-6" id="deleteModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-1 px-5 text-muted">
+                    Are you sure you want to delete <span id="userName" class="fw-bold"></span>?
+                    <p class="mt-2 small">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer py-4 px-5 border-1">
+                    <button type="button" class="btn btn-light text-muted" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <span class="spinner-border spinner-border-sm d-none me-1" role="status"
+                            aria-hidden="true"></span>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Delete user modal management
+        let deleteModal;
+        let deleteForm;
+        let confirmDeleteBtn;
+        let deleteSpinner;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize modal
+            deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+            // Get button and spinner references
+            confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            if (confirmDeleteBtn) {
+                deleteSpinner = confirmDeleteBtn.querySelector('.spinner-border');
+            }
+        });
+
+        // Function to show delete confirmation modal
+        function confirmDelete(uuid, name) {
+            // Set the user name in the modal
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement) {
+                userNameElement.textContent = name;
+            }
+
+            // Store the form reference
+            deleteForm = document.getElementById('delete-form-' + uuid);
+
+            if (!deleteForm) {
+                console.error('Delete form not found for UUID:', uuid);
+                return;
+            }
+
+            // Show the modal
+            deleteModal.show();
+
+            // Add click event to confirm button
+            if (confirmDeleteBtn) {
+                // Remove previous event listener to prevent duplicates
+                confirmDeleteBtn.removeEventListener('click', processDelete);
+                // Add the event listener
+                confirmDeleteBtn.addEventListener('click', processDelete);
+            }
+        }
+
+        // Process the delete action
+        function processDelete() {
+            // Show spinner and disable button
+            if (deleteSpinner) {
+                deleteSpinner.classList.remove('d-none');
+            }
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.disabled = true;
+            }
+
+            // Get the form action URL and token
+            const url = deleteForm.getAttribute('action');
+            const token = deleteForm.querySelector('input[name="_token"]').value;
+
+            // Create fetch request instead of submitting form
+            fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: new URLSearchParams({
+                        '_method': 'DELETE',
+                        '_token': token
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide the modal
+                    deleteModal.hide();
+
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: data.message || 'User deleted successfully',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Redirect to onboarding page
+                        window.location.href = '/admin/onboarding';
+                    });
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+
+                    // Hide the modal
+                    deleteModal.hide();
+
+                    // Show error message
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to delete user. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                })
+                .finally(() => {
+                    // Reset button state
+                    if (deleteSpinner) {
+                        deleteSpinner.classList.add('d-none');
+                    }
+                    if (confirmDeleteBtn) {
+                        confirmDeleteBtn.disabled = false;
+                    }
+                });
+        }
+
+        // Reset modal state when hidden
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteModalElement = document.getElementById('deleteModal');
+            if (deleteModalElement) {
+                deleteModalElement.addEventListener('hidden.bs.modal', function() {
+                    if (deleteSpinner) {
+                        deleteSpinner.classList.add('d-none');
+                    }
+                    if (confirmDeleteBtn) {
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteBtn.removeEventListener('click', processDelete);
+                    }
+                });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const exportForm = document.getElementById('kt_modal_export_users_form');
+            const exportButton = exportForm.querySelector('button[type="submit"]');
+            const formatSelect = exportForm.querySelector('select[name="format"]');
+
+            // Dynamically set table name (adjustable for dynamic use)
+            const currentTable = exportForm.querySelector('input[name="table"]').value || 'users';
+
+            // Add event listener for form submission
+            exportForm.addEventListener('submit', async function(e) {
+                e.preventDefault(); // Prevent default form submission
+
+                // Validate the format field
+                if (!formatSelect.value) {
+                    toastr.error('Please select a format to proceed.', 'Error');
+                    return;
+                }
+
+                // Set loading state
+                exportButton.setAttribute('disabled', true);
+                exportButton.innerHTML = `
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Exporting...
+        `;
+
+                // Build URL with query parameters
+                const params = new URLSearchParams({
+                    format: formatSelect.value,
+                    table: currentTable,
+                }).toString();
+
+                const url = `${exportForm.action}?${params}`;
+
+                // Submit the form using Fetch API
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            Accept: 'application/json',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Export failed with status: ${response.status}`);
+                    }
+
+                    // Trigger the download
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `${currentTable}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Show success toast message
+                    toastr.success('Export completed successfully!', 'Success');
+                } catch (error) {
+                    console.error('Export Error:', error);
+                    toastr.error('An error occurred while exporting. Please try again later.', 'Error');
+                } finally {
+                    // Reset loading state
+                    exportButton.removeAttribute('disabled');
+                    exportButton.innerHTML = 'Export';
+                }
+            });
+        });
+
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('tableSearch');
+            const tableRows = document.querySelectorAll('#userTable tbody tr');
+
+            searchInput.addEventListener('input', function() {
+                const query = searchInput.value.toLowerCase();
+
+                tableRows.forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    if (rowText.includes(query)) {
+                        row.style.display = ''; // Show row
+                    } else {
+                        row.style.display = 'none'; // Hide row
+                    }
+                });
+            });
+        });
+
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            const specificDate = document.querySelector('[name="specific_date"]').value;
+            const startDate = document.querySelector('[name="start_date"]').value;
+            const endDate = document.querySelector('[name="end_date"]').value;
+
+            if (specificDate && (startDate || endDate)) {
+                e.preventDefault();
+                alert('Please select either a specific date or a date range, not both.');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const accountGoalSelect = document.getElementById('accountGoal');
+            const accountTypeSelect = document.getElementById('accountType');
+
+            // Predefined options for Account Type
+            const accountTypes = {
+                all: [{
+                        value: 'all',
+                        label: 'All'
+                    },
+                    {
+                        value: 'sole_applicant',
+                        label: 'Sole Applicant'
+                    },
+                    {
+                        value: 'co_applicant',
+                        label: 'Co-Applicant'
+                    },
+                    {
+                        value: 'owner',
+                        label: 'Owner'
+                    },
+                    {
+                        value: 'co_owner',
+                        label: 'Co-Owner'
+                    },
+                ],
+                rent: [{
+                        value: 'all',
+                        label: 'All'
+                    },
+                    {
+                        value: 'sole_applicant',
+                        label: 'Sole Applicant'
+                    },
+                    {
+                        value: 'co_applicant',
+                        label: 'Co-Applicant'
+                    },
+                ],
+                mortgage: [{
+                        value: 'all',
+                        label: 'All'
+                    },
+                    {
+                        value: 'owner',
+                        label: 'Owner'
+                    },
+                    {
+                        value: 'co_owner',
+                        label: 'Co-Owner'
+                    },
+                ],
+            };
+
+            // Update Account Type options dynamically
+            const updateAccountTypeOptions = (goal) => {
+                // Clear existing options
+                accountTypeSelect.innerHTML = '';
+
+                // Get options based on the selected account goal
+                const options = accountTypes[goal] || [];
+                options.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.value;
+                    opt.textContent = option.label;
+                    opt.selected = option.value ===
+                        '{{ request('account_type') }}'; // Preserve selected option
+                    accountTypeSelect.appendChild(opt);
+                });
+            };
+
+            // Trigger the update on page load and when the account goal changes
+            accountGoalSelect.addEventListener('change', (e) => updateAccountTypeOptions(e.target.value));
+            updateAccountTypeOptions(accountGoalSelect.value);
+        });
+    </script>
 
 
     <script>

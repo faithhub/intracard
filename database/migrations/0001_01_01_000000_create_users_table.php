@@ -26,7 +26,7 @@ return new class extends Migration
             $table->enum('account_goal', ['rent', 'mortgage'])->default('rent'); // Default account type
             $table->enum('account_type', ['sole_applicant', 'co_applicant', 'co_owner', 'owner']); // Optional application type
             $table->enum('payment_setup', ['new', 'existing'])->default('new'); // Default payment setup
-            $table->enum('status', ['active', 'pending', 'inactive', 'suspended', 'deleted'])->default('pending'); // Default status
+            $table->enum('status', ['active', 'pending', 'rejected', 'inactive', 'suspended', 'deleted'])->default('pending'); // Default status
             $table->timestamps();
         });
 

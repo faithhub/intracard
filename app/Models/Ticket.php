@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +17,7 @@ class Ticket extends Model
         'status',
     ];
     protected $casts = [
-        'subject' => 'encrypted',
+        'subject'     => 'encrypted',
         'description' => 'encrypted',
     ];
 
@@ -36,12 +35,30 @@ class Ticket extends Model
     }
 
     public function participants()
-{
-    return $this->belongsToMany(User::class, 'ticket_participants');
-}
+    {
+        return $this->belongsToMany(User::class, 'ticket_participants');
+    }
 
-public function closure()
-{
-    return $this->hasOne(TicketClosure::class);
-}
+    public function closure()
+    {
+        return $this->hasOne(TicketClosure::class);
+    }
+
+    
+    /**
+     * Get the user who created the ticket.
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+
+       /**
+     * Get all messages for this ticket.
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
 }

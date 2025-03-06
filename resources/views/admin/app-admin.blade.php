@@ -26,6 +26,10 @@
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <style>
@@ -74,6 +78,7 @@
                 font-size: 12px !important;
             }
         }
+
         .menu-state-bg-light-primary .menu-item.hover:not(.here)>.menu-link:not(.disabled):not(.active):not(.here),
         .menu-state-bg-light-primary .menu-item:not(.here) .menu-link:hover:not(.disabled):not(.active):not(.here) {
             transition: color .2s ease;
@@ -117,12 +122,13 @@
             color: #fff !important;
         }
 
-        .badge-light-primary{
+        .badge-light-primary {
             background-color: #a000f947 !important;
-    color: #210035 !important;
+            color: #210035 !important;
         }
     </style>
     <!-- Optional: SweetAlert script -->
+    @yield('styles') <!-- Add this line -->
 </head>
 
 
@@ -130,50 +136,58 @@
     data-kt-app-sidebar-fixed="true" data-kt-app-sidebar-push-header="true" data-kt-app-sidebar-push-toolbar="true"
     data-kt-app-sidebar-push-footer="true" class="safari-mode app-default">
 
-     <!-- Toast Container -->
-     <div id="toast-container" class="toast-container position-fixed top-0 end 0 p-3">
-        @if(Session::has('error'))
-        <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    {{ Session::get('error') }}
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container position-fixed top-0 end 0 p-3">
+        @if (Session::has('error'))
+            <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ Session::get('error') }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Close"></button>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-        </div>
         @endif
 
-        @if(Session::has('success'))
-        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    {{ Session::get('success') }}
+        @if (Session::has('success'))
+            <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ Session::get('success') }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Close"></button>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-        </div>
         @endif
 
-        @if(Session::has('warning'))
-        <div class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    {{ Session::get('warning') }}
+        @if (Session::has('warning'))
+            <div class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ Session::get('warning') }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Close"></button>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-        </div>
         @endif
 
-        @if(Session::has('info'))
-        <div class="toast align-items-center text-bg-info border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    {{ Session::get('info') }}
+        @if (Session::has('info'))
+            <div class="toast align-items-center text-bg-info border-0" role="alert" aria-live="assertive"
+                aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ Session::get('info') }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Close"></button>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-        </div>
         @endif
     </div>
 
@@ -234,6 +248,10 @@
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
     <!--end::Global Javascript Bundle-->
 
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+
     <!-- jQuery -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <!-- jquery-confirm JS -->
@@ -247,12 +265,18 @@
     @include('admin.transactions.view-wallet-trans-script')
     <!--begin::Custom Javascript(used for this page only)-->
 
+    <!-- Toast Notification System -->
+    <script src="{{ asset('assets/js/toast-notifications.js') }}"></script>
+
     <script src="{{ asset('assets/js/confirm.js') }}"></script>
     {{-- <script src="{{ asset('assets/js/custom/pages/user-profile/general.js') }}"></script> --}}
     {{-- <script src="{{ asset('assets/js/widgets.bundle.js') }}"></script> --}}
 
+
+    @yield('scripts') <!-- Add this line -->
+
     <!-- Move this script after jQuery and before the closing body tag -->
-<script>
+    {{-- <script>
     $(document).ready(function() {
         toastr.options = {
             "closeButton": true,
@@ -273,23 +297,23 @@
         };
 
         // Handle session messages
-        @if(Session::has('error'))
+        @if (Session::has('error'))
             toastr.error("{{ Session::get('error') }}", "Error");
         @endif
 
-        @if(Session::has('success'))
+        @if (Session::has('success'))
             toastr.success("{{ Session::get('success') }}", "Success");
         @endif
 
-        @if(Session::has('warning'))
+        @if (Session::has('warning'))
             toastr.warning("{{ Session::get('warning') }}", "Warning");
         @endif
 
-        @if(Session::has('info'))
+        @if (Session::has('info'))
             toastr.info("{{ Session::get('info') }}", "Information");
         @endif
     });
-</script>
+</script> --}}
 </body>
 
 </html>

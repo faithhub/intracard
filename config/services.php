@@ -19,6 +19,12 @@ return [
         'secret' => env('PLAID_SECRET'),
         'environment' => env('PLAID_ENV', 'sandbox'), // Default to 'sandbox'
     ],
+
+    'veriff' => [
+        'api_key' => env('VERIFF_API_KEY'),
+        'base_url' =>  env('VERIFF_BASE_URL'),
+        'secret_key' =>  env('VERIFF_SECRET'),
+    ],
     
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),

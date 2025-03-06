@@ -71,7 +71,7 @@ class AccountController extends Controller
         ]);
 
         // Send verification email
-        Mail::send('emails.verification-code', ['code' => $otpCode], function ($message) use ($user) {
+        Mail::send('emails.verification-code', ['code' => $otpCode, 'name' => $user->first_name], function ($message) use ($user) {
             $message->to($user->email)
                 ->subject('Profile Update Verification Code');
         });
@@ -90,21 +90,41 @@ class AccountController extends Controller
             'middle_name'      => 'nullable|string|max:255',
             'phone'            => 'required|string|regex:/^\d{10}$/',
             'email'            => 'required|email|max:255|unique:users,email,' . $user->id,
-            'verificationCode' => 'required_if:email,' . $user->email,
         ]);
+
+        // Check if email is being changed and add verification code validation conditionally
+        if ($request->email !== $user->email) {
+            $validator->addRules([
+                'verificationCode' => 'required',
+            ]);
+        }
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
+        // // Validate the request
+        // $validator = Validator::make($request->all(), [
+        //     'first_name'       => 'required|string|max:255',
+        //     'last_name'        => 'required|string|max:255',
+        //     'middle_name'      => 'nullable|string|max:255',
+        //     'phone'            => 'required|string|regex:/^\d{10}$/',
+        //     'email'            => 'required|email|max:255|unique:users,email,' . $user->id,
+        //     'verificationCode' => 'required_if:email,' . $user->email,
+        // ]);
+
+        // if ($validator->fails()) {
+        //     return response()->json(['errors' => $validator->errors()], 422);
+        // }
 
         // Check if email is being changed
         $isEmailChange = $request->email !== $user->email;
 
         if ($isEmailChange) {
             // Verify the OTP if email is being changed
-            if (! $user->otp_code ||
-                ! $request->verificationCode ||
-                ! Hash::check($request->verificationCode, $user->otp_code) ||
+            if (!$user->otp_code ||
+                !$request->verificationCode ||
+                !Hash::check($request->verificationCode, $user->otp_code) ||
                 Carbon::parse($user->otp_expires_at)->isPast()) {
                 return response()->json([
                     'message' => 'Invalid or expired verification code',

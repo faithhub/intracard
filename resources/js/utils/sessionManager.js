@@ -1,58 +1,3 @@
-// import { useToast } from 'vue-toastification'; // Use the package name directly
-// import router from '@/router/index.js';
-// import axios from '@/utils/axios.js';
-// import { useAuthStore } from '@/stores/authStore.js';
-
-// let sessionTimeoutHandled = false; // Flag to prevent multiple alerts
-// let sessionTimeoutWarning;
-// let sessionTimeout;
-
-// export function handleSessionTimeout() {
-//     const authStore = useAuthStore();
-//     if (sessionTimeoutHandled || !authStore.isAuthenticated) return;
-
-//     sessionTimeoutHandled = true;
-
-//     const toast = useToast();
-//     // Clear localStorage
-//     localStorage.removeItem("user");
-//     localStorage.removeItem("isAuthenticated");
-//     localStorage.removeItem("authToken");
-
-//     // Clear Axios token
-//     delete axios.defaults.headers.common["Authorization"];
-
-//     // Display notification
-//     toast.warning("Session expired. Please log in again.", {
-//         timeout: 5000,
-//     });
-
-//     // Redirect to login page
-//     router.push({ name: "Login" }); // Use `router.push` instead of `next`
-
-//     sessionTimeoutHandled = false; // Reset flag after navigation
-// }
-
-// export function startSessionTimers() {
-//     sessionTimeoutWarning = setTimeout(() => {
-//         const toast = useToast();
-//         toast.info(
-//             "Your session will expire soon. Please refresh or continue using the app.",
-//             { timeout: 60000 } // 1-minute warning
-//         );
-//     }, 14 * 60 * 1000); // 14 minutes
-
-//     sessionTimeout = setTimeout(() => {
-//         handleSessionTimeout();
-//     }, 15 * 60 * 1000); // 15 minutes
-// }
-
-// export function resetSessionTimers() {
-//     clearTimeout(sessionTimeoutWarning);
-//     clearTimeout(sessionTimeout);
-//     startSessionTimers();
-// }
-
 import { useToast } from "vue-toastification"; // Use the package name directly
 import router from "@/router/index.js";
 import { silentRequest } from "@/utils/axios.js"; // Use the updated Axios request type
@@ -90,29 +35,48 @@ export function handleSessionTimeout() {
 }
 
 export async function startSessionTimers() {
+
+    const keepAliveInterval = setInterval(keepSessionAlive, 10 * 60 * 1000);
+    // Your existing code
     sessionTimeoutWarning = setTimeout(() => {
         const toast = useToast();
         toast.info(
             "Your session will expire soon. Please refresh or continue using the app.",
-            { timeout: 3000 } // 1-minute warning
+            { timeout: 3000 }
         );
-    }, 14 * 60 * 1000); // 14 minutes
+    }, 14 * 60 * 1000);
 
     sessionTimeout = setTimeout(async () => {
         try {
-            // Attempt to ping the server to validate session before timeout
             await silentRequest.get("/api/ping");
-            resetSessionTimers(); // Reset timers if session is still valid
+            resetSessionTimers();
         } catch (error) {
             if (error.response?.status === 401) {
-                handleSessionTimeout(); // Handle session expiration
+                handleSessionTimeout();
             }
         }
-    }, 15 * 60 * 1000); // 15 minutes
+    }, 15 * 60 * 1000);
+
+    // Store interval ID so it can be cleared later
+    return keepAliveInterval;
 }
 
 export function resetSessionTimers() {
     clearTimeout(sessionTimeoutWarning);
     clearTimeout(sessionTimeout);
     startSessionTimers();
+}
+
+// Add this function to your sessionManager.js
+export async function keepSessionAlive() {
+    try {
+        await silentRequest.get("/api/keep-alive");
+        return true;
+    } catch (error) {
+        console.error("Failed to keep session alive:", error);
+        if (error.response?.status === 401 || error.response?.status === 419) {
+            handleSessionTimeout();
+        }
+        return false;
+    }
 }

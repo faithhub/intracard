@@ -103,115 +103,67 @@
                                     </div>
                                 </div>
 
-                                <!-- Transactions -->
-                                <div class="card mb-5 mb-xl-12">
-                                    <!--begin::Card header-->
-                                    <div class="card-header card-header-stretch pb-0">
-                                        <!--begin::Title-->
+                                <v-card class="mb-5 mb-xl-12">
+                                    <v-card-title class="card-header-stretch pb-0">
                                         <div class="card-title">
                                             <h3 class="m-0">Transactions</h3>
                                         </div>
-                                    </div>
+                                    </v-card-title>
 
-                                    <div class="card-body pt-0">
-                                        <div id="kt_customers_table_wrapper"
-                                            class="dt-container dt-bootstrap5 dt-empty-footer">
-                                            <div id="" class="table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                                    id="kt_customers_table" style="width: 100%;">
-                                                    <colgroup>
-                                                        <col data-dt-column="0" style="width: 36.3906px;">
-                                                        <col data-dt-column="1" style="width: 132.766px;">
-                                                        <col data-dt-column="2" style="width: 166.844px;">
-                                                        <col data-dt-column="3" style="width: 191.25px;">
-                                                        <col data-dt-column="4" style="width: 140.078px;">
-                                                        <col data-dt-column="5" style="width: 177.438px;">
-                                                        <col data-dt-column="6" style="width: 111.734px;">
-                                                    </colgroup>
-                                                    <thead>
-                                                        <tr class="text-start text-gray-500 fw-bold fs-7 text-uppercase gs-0"
-                                                            role="row">
-                                                            <th class="w-10px pe-2 dt-orderable-none" data-dt-column="0"
-                                                                rowspan="1" colspan="1" aria-label="">
-                                                                <span class="dt-column-title">
-                                                                    <div
-                                                                        class="form-check form-check-sm form-check-custom form-check-solid me-3">
-                                                                        <input class="form-check-input" type="checkbox"
-                                                                            data-kt-check="true"
-                                                                            data-kt-check-target="#kt_customers_table .form-check-input"
-                                                                            value="1">
-                                                                    </div>
-                                                                </span>
-                                                                <span class="dt-column-order"></span>
-                                                            </th>
-                                                            <th class="min-w-125px dt-orderable-asc dt-orderable-desc"
-                                                                data-dt-column="1" rowspan="1" colspan="1"
-                                                                aria-label="Customer Name: Activate to sort"
-                                                                tabindex="0"><span class="dt-column-title"
-                                                                    role="button">Transaction ID</span><span
-                                                                    class="dt-column-order"></span></th>
-                                                            <th class="min-w-125px dt-orderable-asc dt-orderable-desc"
-                                                                data-dt-column="2" rowspan="1" colspan="1"
-                                                                aria-label="Email: Activate to sort" tabindex="0"><span
-                                                                    class="dt-column-title"
-                                                                    role="button">Amount</span><span
-                                                                    class="dt-column-order"></span></th>
-                                                            <th class="min-w-125px dt-orderable-asc dt-orderable-desc"
-                                                                data-dt-column="4" rowspan="1" colspan="1"
-                                                                aria-label="Payment Method: Activate to sort"
-                                                                tabindex="0"><span class="dt-column-title" role="button"
-                                                                    id="tableCardType">Credit Card</span><span
-                                                                    class="dt-column-order"></span></th>
-                                                            <th class="min-w-125px dt-orderable-asc dt-orderable-desc"
-                                                                data-dt-column="5" rowspan="1" colspan="1"
-                                                                aria-label="Created Date: Activate to sort"
-                                                                tabindex="0"><span class="dt-column-title"
-                                                                    role="button">Date</span><span
-                                                                    class="dt-column-order"></span></th>
-                                                            <th class="text-end min-w-70px dt-orderable-none"
-                                                                data-dt-column="6" rowspan="1" colspan="1"
-                                                                aria-label="Actions"><span
-                                                                    class="dt-column-title">Actions</span><span
-                                                                    class="dt-column-order"></span></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="fw-semibold text-gray-600">
-                                                        <tr>
-                                                            <td>
-                                                                <div
-                                                                    class="form-check form-check-sm form-check-custom form-check-solid">
-                                                                    <input class="form-check-input" type="checkbox"
-                                                                        value="1">
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                #DFSGDFHGGFDJHGF
-                                                            </td>
-                                                            <td>
-                                                                $500.00
-                                                            </td>
-                                                            <td data-filter="visa">
-                                                                <img src="https://c.webcyborg.com.ng/public/assets/cards/mastercard.png"
-                                                                    class="w-35px me-3" alt="">
-                                                                **** 3215
-                                                            </td>
-                                                            <td data-order="2020-08-18T15:34:00+01:00">
-                                                                18 Aug 2020, 3:34 pm
-                                                            </td>
-                                                            <td class="text-end">
-                                                                <!-- <a href="#" class="menu-link px-3">View</a> -->
-                                                                <button
-                                                                    class="btn btn-sm btn-light btn-active-light-primary px-3"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#kt_modal_new_card">View</button>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                    <v-card-text class="pt-0">
+                                        <v-data-table 
+                                            :headers="transactionHeaders" 
+                                            :items="transactions" 
+                                            :items-per-page="5"
+                                            :footer-props="{
+                                                'items-per-page-options': [5, 10, 15, 20],
+                                                'show-current-page': true,
+                                                'show-first-last-page': true
+                                            }" 
+                                            item-key="uuid" 
+                                            class="elevation-0 table-responsive"
+                                            :class="{'table align-middle table-row-dashed fs-6 gy-5': true}"
+                                        >
+                                            <!-- Transaction ID column -->
+                                            <template v-slot:item.uuid="{ item }">
+                                                {{ item.uuid }}
+                                            </template>
+
+                                            <!-- Amount column -->
+                                            <template v-slot:item.amount="{ item }">
+                                                {{ formatAmount(item.amount) }}
+                                            </template>
+
+                                            <!-- Credit Card column -->
+                                            <template v-slot:item.card="{ item }">
+                                                <div class="d-flex align-center">
+                                                    <img :src="getCardImageSrc(item.card_type)" class="me-3" height="35" width="35" alt="">
+                                                    **** {{ item.card_last4 }}
+                                                </div>
+                                            </template>
+
+                                            <!-- Date column -->
+                                            <template v-slot:item.created_at="{ item }">
+                                                {{ formatDate(item.created_at) }}
+                                            </template>
+
+                                            <!-- Actions column -->
+                                            <template v-slot:item.actions="{ item }">
+                                                <div class="text-end">
+                                                    <v-btn 
+                                                        color="deep-purple" 
+                                                        variant="outlined" 
+                                                        size="small"
+                                                        class="px-3"
+                                                        @click="showTransactionDetails(item)"
+                                                    >
+                                                        View
+                                                    </v-btn>
+                                                </div>
+                                            </template>
+                                        </v-data-table>
+                                    </v-card-text>
+                                </v-card>
                             </div>
                         </section>
                     </v-card>
@@ -219,6 +171,79 @@
 
             </v-row>
         </v-col>
+
+        <!-- Transaction Details Modal -->
+<v-dialog v-model="showTransactionDetailsModal" max-width="650px" transition="dialog-transition">
+    <v-card>
+        <!-- Modal Header -->
+        <v-card-title class="d-flex justify-space-between align-center border-0 pb-0">
+            <span class="text-h5 fw-bold">Transaction Details</span>
+            <v-btn icon variant="text" @click="toggleTransactionDetailsModal" class="btn-active-color-primary">
+                <v-icon>mdi-close</v-icon>
+            </v-btn>
+        </v-card-title>
+
+        <!-- Modal Body -->
+        <v-card-text class="pt-5 pb-5">
+            <v-row v-if="selectedTransaction">
+                <v-col cols="12">
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Transaction ID:</div>
+                        <div class="text-grey-darken-1">{{ selectedTransaction.uuid }}</div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Date:</div>
+                        <div class="text-grey-darken-1">{{ formatDate(selectedTransaction.created_at) }}</div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Amount:</div>
+                        <div class="text-grey-darken-1">{{ formatAmount(selectedTransaction.amount) }}</div>
+                    </div>
+                    
+                    <!-- <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Service:</div>
+                        <div class="text-grey-darken-1">{{ selectedTransaction.service_name }}</div>
+                    </div> -->
+                    
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Type:</div>
+                        <div class="text-grey-darken-1">{{ capitalizeFirstLetter(selectedTransaction.type) }}</div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Status:</div>
+                        <div class="text-grey-darken-1">{{ capitalizeFirstLetter(selectedTransaction.status) }}</div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Charge:</div>
+                        <div class="text-grey-darken-1">{{ formatAmount(selectedTransaction.charge ?? 0) }}</div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap mb-6">
+                        <div class="fw-bold me-5 w-25">Payment Method:</div>
+                        <div class="text-grey-darken-1 d-flex align-center">
+                            <v-img :src="getCardImageSrc(selectedTransaction.card_type)" width="35" height="35" class="me-3"></v-img>
+                            **** {{ selectedTransaction.card_last4 }}
+                        </div>
+                    </div>
+                </v-col>
+            </v-row>
+        </v-card-text>
+
+        <!-- Modal Footer -->
+        <v-card-actions class="d-flex justify-end pa-4 border-t">
+            <v-btn color="grey-darken-1" variant="text" @click="toggleTransactionDetailsModal">
+                Close
+            </v-btn>
+            <v-btn color="primary" prepend-icon="mdi-download" @click="downloadTransactionReceipt">
+                Download Receipt
+            </v-btn>
+        </v-card-actions>
+    </v-card>
+</v-dialog>
 
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="deleteDialog" max-width="500px">
@@ -356,6 +381,64 @@ export default {
     data() {
         const { unreadCount, refresh } = useNotifications();
         return {
+            selectedTransactions: [],
+      transactionHeaders: [
+        { 
+          title: 'Transaction ID', 
+          key: 'uuid', 
+          sortable: true,
+          align: 'start',
+          width: '132px',
+          class: 'min-w-125px'
+        },
+        { 
+          title: 'Amount', 
+          key: 'amount', 
+          sortable: true,
+          align: 'start',
+          width: '166px',
+          class: 'min-w-125px'
+        },
+        { 
+          title: 'Credit Card', 
+          key: 'card', 
+          sortable: true,
+          align: 'start',
+          width: '191px',
+          class: 'min-w-125px'
+        },
+        { 
+          title: 'Date', 
+          key: 'created_at', 
+          sortable: true,
+          align: 'start',
+          width: '177px',
+          class: 'min-w-125px'
+        },
+        { 
+          title: 'Actions', 
+          key: 'actions', 
+          sortable: false,
+          align: 'end',
+          width: '111px',
+          class: 'text-end min-w-70px'
+        },
+      ],
+      transactions: [
+        // Your transaction data will go here
+        {
+          uuid: 'DFSGDFHGGFDJHGF',
+          amount: 500.00,
+          card_type: 'mastercard',
+          card_last4: '3215',
+          created_at: '2020-08-18T15:34:00+01:00',
+          status: 'completed',
+          type: 'inbound'
+        }
+      ],
+      showTransactionDetailsModal: false,
+      selectedTransaction: {
+      },
             isSkeletonLoading: true,
             unreadCount,
             refreshNotifications: refresh,
@@ -407,13 +490,8 @@ export default {
             loading: true,
             rules: {
                 required: v => !!v || 'This field is required',
-                nameValidation: v => (v && v.length >= 3) || 'Name must be at least 3 characters',
-                //             cardNumberValidation: v => {
-                //     const cleaned = v.replace(/\s+/g, '');
-                //     if (cleaned.length !== 16) return 'Card number must be 16 digits';
-                //     if (!/^\d+$/.test(cleaned)) return 'Card number can only contain digits';
-                //     return true;
-                // },
+                // nameValidation: v => (v && v.length >= 3) || 'Name must be at least 3 characters',
+                nameValidation: v => (v && v.length >= 3 && v.length <= 40) || 'Name must be within 3-40 characters',
                 cardNumberValidation: v => {
                     const cleanNumber = v.replace(/\s+/g, '');
                     return /^\d{16}$/.test(cleanNumber) || 'Invalid card number';
@@ -444,6 +522,46 @@ export default {
         }
     },
     methods: {
+        formatDate(date) {
+      const d = new Date(date);
+      // Format like "18 Aug 2020, 3:34 pm"
+      return d.toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+      }) + ', ' + d.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: 'numeric', 
+        hour12: true 
+      });
+    },
+    formatAmount(amount) {
+      return '$' + Number(amount).toFixed(2);
+    },
+    getCardImageSrc(cardType) {
+      // Replace with your actual card type mapping
+      const cardImages = {
+        'visa': 'https://e7.pngegg.com/pngimages/308/426/png-clipart-visa-logo-credit-card-visa-logo-payment-visa-blue-text-thumbnail.png',
+        'mastercard': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/MasterCard_Logo.svg/300px-MasterCard_Logo.svg.png',
+        'amex': 'https://banner2.cleanpng.com/20180803/ueg/1d8fd12ae4ad0c3d24f83a546e044462.webp',
+        // Add other card types as needed
+      };
+      return cardImages[cardType.toLowerCase()] || '';
+    },
+    capitalizeFirstLetter(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    },
+    toggleTransactionDetailsModal() {
+      this.showTransactionDetailsModal = !this.showTransactionDetailsModal;
+    },
+    showTransactionDetails(transaction) {
+      this.selectedTransaction = transaction;
+      this.showTransactionDetailsModal = true;
+    },
+    downloadTransactionReceipt() {
+      // Implement your download receipt functionality
+      console.log('Downloading receipt for transaction:', this.selectedTransaction.uuid);
+    },
         // Function to open delete confirmation dialog
         confirmDeleteCard(cardId) {
             this.deleteCardId = cardId;
@@ -636,9 +754,9 @@ export default {
                     // Fetch fresh cards data
                     await this.fetchCards();
                     // Show success message and close modal
+                    this.toggleAddCardModal();
                     useToast().success(response.data.message || 'Card added successfully');
                     await this.refreshNotifications(); // Refresh notifications
-                    this.toggleAddCardModal();
                 }
             } catch (error) {
                 if (error.response?.status === 422) {

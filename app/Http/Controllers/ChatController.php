@@ -89,6 +89,7 @@ class ChatController extends Controller
             'conversation_id' => $request->conversation_id,
             'sender_id' => Auth::id(),
             'message' => $request->message,
+            'sender_type' => 'user',
             'file_path' => $filePath,
             'file_name' => $fileName,
         ]);

@@ -53,7 +53,7 @@ class TransactionController extends Controller
         try {
             //code...
             $data['dashboard_title'] = "Wallet Transactions";
-            $data['transaction'] = WalletTransaction::with(['user', 'wallet'])->where('uuid', $uuid)->firstOrFail();
+            $data['transaction'] = WalletTransaction::with(['user', 'wallet', ])->where('uuid', $uuid)->firstOrFail();
             return view('admin.transactions.view-card-trans', $data);
         } catch (\Throwable $th) {
             dd($th);
@@ -102,6 +102,8 @@ class TransactionController extends Controller
 
             // Get filtered results
             $data['transactions'] = $query->paginate(10);
+
+            // dd($data);
 
             return view('admin.transactions.card', $data);
         } catch (\Throwable $th) {

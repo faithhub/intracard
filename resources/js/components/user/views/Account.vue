@@ -298,12 +298,12 @@
                       <!-- Action Buttons -->
                       <div class="d-flex align-items-center mt-md-0 mt-3">
                         <v-btn prepend-icon="mdi-eye" color="primary" variant="tonal"
-                          :href="addressDetails.tenancyAgreement" target="_blank" class="me-2" size="small">
+                          :href="addressDetails.tenancy_agreement_url" target="_blank" class="me-2" size="small">
                           View
                         </v-btn>
 
                         <v-btn prepend-icon="mdi-download" color="primary" variant="elevated"
-                          :href="addressDetails.tenancyAgreement" download size="small">
+                          :href="addressDetails.tenancy_agreement_url" download size="small">
                           Download
                         </v-btn>
                       </div>
@@ -467,6 +467,7 @@ export default {
         city: "",
         amount: "",
         tenancyAgreement: "",
+        tenancy_agreement_url: "",
         title: "",
       },
       landlordFinance: [], // Default empty array
@@ -623,7 +624,6 @@ export default {
     },
     getOrdinalDay(day) {
       if (!day) return '';
-
       const suffix = ['th', 'st', 'nd', 'rd'];
       const remainder = day % 100;
       return day + (suffix[(remainder - 20) % 10] || suffix[remainder] || suffix[0]);

@@ -119,76 +119,202 @@ class PaymentScheduleController extends Controller
             $percentage = 100;
             $teamId     = null;
         }
+        // $paymentSchedules = $schedules
+        //     ->with(['address', 'billHistory.bill', 'reminders']) // Eager load relationships
+        //     ->select('id', 'payment_type', 'frequency', 'recurring_day', 'duration_from', 'duration_to', 'status', 'address_id', 'bill_history_id', 'reminder_dates')
+        //     ->get();
 
-        // dd($schedules->get(), $user->id, $user, $teamAdmin);
+
         $paymentSchedules = $schedules
-            ->with(['address', 'billHistory.bill']) // Eager load relationships
-            ->select('id', 'payment_type', 'frequency', 'recurring_day', 'duration_from', 'duration_to', 'status', 'address_id', 'bill_history_id', 'reminder_dates')
-            ->get()
-            ->map(function ($schedule) use ($user, $userRole, $percentage, $teamId) {
-                $recurringDates = $schedule->generateRecurringDates();
-
-                return collect($recurringDates)->map(function ($date) use ($schedule, $user, $userRole, $percentage, $teamId) {
-                    // Get amount based on payment type
-                    if ($schedule->payment_type === 'bill') {
-                        // Skip if there's no billHistory for a bill payment type
-                        if (!$schedule->billHistory) {
-                            return null; // This will be filtered out later
-                        }
-                        $totalAmount = $schedule->billHistory->amount ?? 0;
-                        $amount = $totalAmount; // Bills don't use percentage split
-                    } else {
-                        $totalAmount = $schedule->address->amount ?? 0;
-                        $amount      = $totalAmount * ($percentage / 100); // Apply percentage for rent/mortgage
+        ->with(['address', 'billHistory.bill', 'reminders' => function($query) use ($user) {
+            // Get reminders for the current user
+            $query->where('user_id', $user->id)
+                  ->where('status', 'pending')
+                  ->orderBy('payment_date')
+                  ->orderBy('reminder_date');
+        }])
+        ->select('id', 'payment_type', 'frequency', 'recurring_day', 'duration_from', 'duration_to', 'status', 'address_id', 'bill_history_id', 'reminder_dates')
+        ->get()
+        ->map(function ($schedule) use ($user, $userRole, $percentage, $teamId) {
+            // Get amount based on payment type
+            if ($schedule->payment_type === 'bill') {
+                if (!$schedule->billHistory) {
+                    return null; // This will be filtered out later
+                }
+                $totalAmount = $schedule->billHistory->amount ?? 0;
+                $amount = $totalAmount; // Bills don't use percentage split
+            } else {
+                $totalAmount = $schedule->address->amount ?? 0;
+                $amount = $totalAmount * ($percentage / 100); // Apply percentage for rent/mortgage
+            }
+    
+            // Get all reminders for this schedule
+            $reminders = $schedule->reminders ?? collect([]);
+            
+            // Group reminders by payment date
+            $remindersByPaymentDate = [];
+            foreach ($reminders as $reminder) {
+                $paymentDate = $reminder->payment_date->toDateString();
+                $reminderType = $reminder->reminder_type;
+                
+                if (!isset($remindersByPaymentDate[$paymentDate])) {
+                    $remindersByPaymentDate[$paymentDate] = [];
+                }
+                
+                $remindersByPaymentDate[$paymentDate][$reminderType] = [
+                    'reminder_date' => $reminder->reminder_date->toDateString(),
+                    'reminder_id' => $reminder->id,
+                    'status' => $reminder->status,
+                    'payment_status' => $reminder->payment_status
+                ];
+            }
+            
+            // Get all payment dates from the schedule (fallback if no reminders exist)
+            if (empty($remindersByPaymentDate) && $schedule->reminder_dates) {
+                $jsonData = json_decode($schedule->reminder_dates, true) ?? [];
+                
+                // Convert simple format to enhanced format
+                foreach ($jsonData as $paymentDate => $types) {
+                    $remindersByPaymentDate[$paymentDate] = [];
+                    foreach ($types as $type => $date) {
+                        $remindersByPaymentDate[$paymentDate][$type] = [
+                            'reminder_date' => $date,
+                            'reminder_id' => null, // No reminder ID for fallback data
+                            'status' => 'pending',
+                            'payment_status' => 'pending'
+                        ];
                     }
-
+                }
+            }
+            
+            // Simplified format for reminder_dates (backward compatibility)
+            $simplifiedReminderDates = [];
+            foreach ($remindersByPaymentDate as $paymentDate => $types) {
+                $simplifiedReminderDates[$paymentDate] = [];
+                foreach ($types as $type => $details) {
+                    $simplifiedReminderDates[$paymentDate][$type] = $details['reminder_date'];
+                }
+            }
+            
+            return [
+                'id'             => $schedule->id,
+                'payment_type'   => $schedule->payment_type,
+                'payment_date'   => array_keys($remindersByPaymentDate)[0] ?? null,
+                'status'         => $schedule->status,
+                'amount'         => $amount,
+                'total_amount'   => $totalAmount,
+                'bill_type'      => $schedule->payment_type === 'bill' ? ($schedule->billHistory->bill->name ?? null) : null,
+                'bill_details'   => $schedule->payment_type === 'bill' ? [
+                    'name'           => $schedule->billHistory?->bill?->name,
+                    'provider'       => $schedule->billHistory?->provider,
+                    'account_number' => $schedule->billHistory?->account_number,
+                    'due_date'       => $schedule->billHistory?->due_date,
+                    'phone'          => $schedule->billHistory?->phone,
+                    'frequency'      => $schedule->billHistory?->frequency,
+                    'amount'         => $schedule->billHistory?->amount,
+                    'status'         => $schedule->billHistory?->status,
+                    'car_details'    => $schedule->billHistory?->bill?->value === 'carBill' ? [
+                        'car_model' => $schedule->billHistory?->car_model,
+                        'car_year'  => $schedule->billHistory?->car_year,
+                        'car_vin'   => $schedule->billHistory?->car_vin,
+                    ] : null,
+                ] : null,
+                'team_info'      => $teamId ? [
+                    'team_id'    => $teamId,
+                    'role'       => $userRole,
+                    'percentage' => $percentage,
+                ] : null,
+                // 'reminder_dates' => $simplifiedReminderDates,
+                'payment_dates'  => $remindersByPaymentDate,
+                'reminders'      => $reminders->map(function ($reminder) {
                     return [
-                        'id'             => $schedule->id,
-                        'payment_type'   => $schedule->payment_type,
-                        'payment_date'   => $date,
-                        'reminder_dates' => $schedule->generateRemindersForDate($date),
-                        'payment_dates'  => json_decode($schedule->reminder_dates, true),
-                        'status'         => $schedule->status,
-                        'amount'         => $amount,
-                        'total_amount'   => $totalAmount,
-                        // 'bill_details'   =>  $schedule->payment_type === 'bill' ? $schedule->billHistory : null,
-                        // 'bill_type' => $schedule->payment_type === 'bill' ? ($schedule->billHistory->bill->name ?? null) : null,
-                        // 'bill_details' => $schedule->payment_type === 'bill' ? $schedule->billHistory : null,
-                        'bill_type'      => $schedule->payment_type === 'bill' ? ($schedule->billHistory->bill->name ?? null) : null,
-                        'bill_details'   => $schedule->payment_type === 'bill' ? [
-                            'name'           => $schedule->billHistory?->bill?->name,
-                            'provider'       => $schedule->billHistory?->provider,
-                            'account_number' => $schedule->billHistory?->account_number,
-                            'due_date'       => $schedule->billHistory?->due_date,
-                            'phone'          => $schedule->billHistory?->phone,
-                            'frequency'      => $schedule->billHistory?->frequency,
-                            'amount'         => $schedule->billHistory?->amount,
-                            'status'         => $schedule->billHistory?->status,
-                            // Add null check for car details
-                            'car_details'    => $schedule->billHistory?->bill?->value === 'carBill' ? [
-                                'car_model' => $schedule->billHistory?->car_model,
-                                'car_year'  => $schedule->billHistory?->car_year,
-                                'car_vin'   => $schedule->billHistory?->car_vin,
-                            ] : null,
-                        ] : null,
-                        // 'bill_details' => $schedule->payment_type === 'bill' ? [
-                        //     'provider' => $schedule->billHistory->provider ?? null,
-                        //     'account_number' => $schedule->billHistory->account_number ?? null,
-                        //     'due_date' => $schedule->billHistory->due_date ?? null,
-                        //     // Add other bill details as needed
-                        // ] : null,
-                        'team_info'      => $teamId ? [
-                            'team_id'    => $teamId,
-                            'role'       => $userRole,
-                            'percentage' => $percentage,
-                        ] : null,
+                        'id'            => $reminder->id,
+                        'reminder_type' => $reminder->reminder_type,
+                        'reminder_date' => $reminder->reminder_date->toDateString(),
+                        'payment_date'  => $reminder->payment_date->toDateString(),
+                        'status'        => $reminder->status,
+                        'payment_status'=> $reminder->payment_status,
                     ];
-                });
-            // })->flatten(1)->filter();
-        })->flatten(1)
+                })->values()->toArray(),
+            ];
+        })
         ->filter()
-        ->values(); // Add values() to reset array keys to sequential numbers
+        ->values();
+
+    
+    // dd($schedules->get(), $user->id, $user, $teamAdmin ?? null, $paymentSchedules);
+
+    //     $paymentSchedules = $schedules
+    //         ->with(['address', 'billHistory.bill']) // Eager load relationships
+    //         ->select('id', 'payment_type', 'frequency', 'recurring_day', 'duration_from', 'duration_to', 'status', 'address_id', 'bill_history_id', 'reminder_dates')
+    //         ->get()
+    //         ->map(function ($schedule) use ($user, $userRole, $percentage, $teamId) {
+    //             $recurringDates = $schedule->generateRecurringDates();
+
+    //             return collect($recurringDates)->map(function ($date) use ($schedule, $user, $userRole, $percentage, $teamId) {
+    //                 // Get amount based on payment type
+    //                 if ($schedule->payment_type === 'bill') {
+    //                     // Skip if there's no billHistory for a bill payment type
+    //                     if (!$schedule->billHistory) {
+    //                         return null; // This will be filtered out later
+    //                     }
+    //                     $totalAmount = $schedule->billHistory->amount ?? 0;
+    //                     $amount = $totalAmount; // Bills don't use percentage split
+    //                 } else {
+    //                     $totalAmount = $schedule->address->amount ?? 0;
+    //                     $amount      = $totalAmount * ($percentage / 100); // Apply percentage for rent/mortgage
+    //                 }
+
+    //                 return [
+    //                     'id'             => $schedule->id,
+    //                     'payment_type'   => $schedule->payment_type,
+    //                     'payment_date'   => $date,
+    //                     'reminder_dates' => $schedule->generateRemindersForDate($date),
+    //                     'payment_dates'  => json_decode($schedule->reminder_dates, true),
+    //                     'status'         => $schedule->status,
+    //                     'amount'         => $amount,
+    //                     'total_amount'   => $totalAmount,
+    //                     // 'bill_details'   =>  $schedule->payment_type === 'bill' ? $schedule->billHistory : null,
+    //                     // 'bill_type' => $schedule->payment_type === 'bill' ? ($schedule->billHistory->bill->name ?? null) : null,
+    //                     // 'bill_details' => $schedule->payment_type === 'bill' ? $schedule->billHistory : null,
+    //                     'bill_type'      => $schedule->payment_type === 'bill' ? ($schedule->billHistory->bill->name ?? null) : null,
+    //                     'bill_details'   => $schedule->payment_type === 'bill' ? [
+    //                         'name'           => $schedule->billHistory?->bill?->name,
+    //                         'provider'       => $schedule->billHistory?->provider,
+    //                         'account_number' => $schedule->billHistory?->account_number,
+    //                         'due_date'       => $schedule->billHistory?->due_date,
+    //                         'phone'          => $schedule->billHistory?->phone,
+    //                         'frequency'      => $schedule->billHistory?->frequency,
+    //                         'amount'         => $schedule->billHistory?->amount,
+    //                         'status'         => $schedule->billHistory?->status,
+    //                         // Add null check for car details
+    //                         'car_details'    => $schedule->billHistory?->bill?->value === 'carBill' ? [
+    //                             'car_model' => $schedule->billHistory?->car_model,
+    //                             'car_year'  => $schedule->billHistory?->car_year,
+    //                             'car_vin'   => $schedule->billHistory?->car_vin,
+    //                         ] : null,
+    //                     ] : null,
+    //                     // 'bill_details' => $schedule->payment_type === 'bill' ? [
+    //                     //     'provider' => $schedule->billHistory->provider ?? null,
+    //                     //     'account_number' => $schedule->billHistory->account_number ?? null,
+    //                     //     'due_date' => $schedule->billHistory->due_date ?? null,
+    //                     //     // Add other bill details as needed
+    //                     // ] : null,
+    //                     'team_info'      => $teamId ? [
+    //                         'team_id'    => $teamId,
+    //                         'role'       => $userRole,
+    //                         'percentage' => $percentage,
+    //                     ] : null,
+    //                 ];
+    //             });
+    //         // })->flatten(1)->filter();
+    //     })->flatten(1)
+    //     ->filter()
+    //     ->values();
+        // Add values() to reset array keys to sequential numbers
             // })->flatten(1);
+
+            // dd($paymentSchedules);
 
         return response()->json($paymentSchedules);
     }

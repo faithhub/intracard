@@ -96,36 +96,37 @@
                             <div class="symbol symbol-40px cursor-pointer"
                                 data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
                                 data-kt-menu-placement="bottom-start" data-kt-menu-overflow="true">
-                                <img src="https://img.freepik.com/premium-vector/avatar-icon0002_750950-43.jpg?semt=ais_hybrid"
-                                    alt="" />
+                                <img src="{{ Auth::guard('admin')->user()->profile_picture ? Storage::url(Auth::guard('admin')->user()->profile_picture) : 'https://img.freepik.com/premium-vector/avatar-icon0002_750950-43.jpg?semt=ais_hybrid' }}"
+                                    alt="Profile" class="header-profile-img" />
                             </div>
                             <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
                                 data-kt-menu="true">
                                 <div class="menu-item px-3">
                                     <div class="menu-content d-flex align-items-center px-3">
                                         <div class="symbol symbol-50px me-5">
-                                            <img alt="Logo"
-                                                src="https://img.freepik.com/premium-vector/avatar-icon0002_750950-43.jpg?semt=ais_hybrid" />
+                                            <img alt="Profile"
+                                                src="{{ Auth::guard('admin')->user()->profile_picture ? Storage::url(Auth::guard('admin')->user()->profile_picture) : asset('assets/images/default-avatar.png') }}" 
+                                                class="header-profile-img" />
                                         </div>
                                         <div class="d-flex flex-column">
-                                            <div class="fw-bold d-flex align-items-center fs-5">
+                                            <div class="fw-bold d-flex align-items-center fs-5 header-user-name">
                                                 {{ Auth::guard('admin')->user()->first_name ?? '--' }} {{ Auth::guard('admin')->user()->last_name ?? '--' }}
                                                 <span class="badge badge-light-success fw-bold fs-8 px-2 py-1 ms-2">
-                                                    {{-- Pro --}}
+                                                    Admin
                                                 </span>
                                             </div>
-                                            <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">{{ Auth::guard('admin')->user()->email ?? '--' }} </a>
+                                            <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">{{ Auth::guard('admin')->user()->email ?? '--' }}</a>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="separator my-2"></div>
                                 <div class="menu-item px-5">
-                                    <a href="" class="menu-link px-5">
+                                    <a href="{{ route('admin.profile') }}" class="menu-link px-5">
                                         My Profile
                                     </a>
                                 </div>
                                 <div class="menu-item px-5">
-                                    <a href="" class="menu-link px-5">
+                                    <a href="{{ route('admin.profile') }}#password" class="menu-link px-5">
                                         <span class="menu-text">Update Password</span>
                                         <span class="menu-badge">
                                             <!-- <span class="badge badge-light-danger badge-circle fw-bold fs-7">3</span> -->
@@ -136,14 +137,14 @@
                                     <button id="logoutBtn"
                                         class="menu-link px-5 logoutBtn">
                                         Sign Out
-                                </button>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         <div class="me-2 desktop-only">
                             <!--begin::Username-->
                             <a href="#"
-                                class="app-sidebar-username text-gray-800 text-hover-primary fs-6 fw-semibold lh-0">{{ Auth::guard('admin')->user()->first_name ?? '--' }} {{ Auth::guard('admin')->user()->last_name ?? '--' }}</a>
+                                class="app-sidebar-username text-gray-800 text-hover-primary fs-6 fw-semibold lh-0 header-user-name">{{ Auth::guard('admin')->user()->first_name ?? '--' }} {{ Auth::guard('admin')->user()->last_name ?? '--' }}</a>
                             <!--end::Username-->
 
                             <!--begin::Description-->

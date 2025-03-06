@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
@@ -11,42 +10,42 @@ class VerificationController extends Controller
     public function verifyAccount(Request $request)
     {
         $verifyStatus = true; // This would be determined based on your actual verification logic
-        
-        return response()->json([
-            'verifyStatus' => $verifyStatus,
-        ]);
-        
+
+        // return response()->json([
+        //     'verifyStatus' => $verifyStatus,
+        // ]);
+
         // Simulate verification logic; return true if verification is successful
         $email = "johndoe@example.com";
         $userDataw = [
-            'user_id' => uniqid(`user_id_{$email}`, true), // Use authenticated user ID or generate a unique one
-            // 'user_id' => 'unique_user_id_12345',
+            'user_id'    => uniqid(`user_id_{$email}`, true), // Use authenticated user ID or generate a unique one
+                                                              // 'user_id' => 'unique_user_id_12345',
             'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'johndoe@example.com',
-            'phone' => '+1234567890',
-            'address' => [
-                'street' => '123 Main St',
-                'city' => 'New York',
-                'region' => 'NY',
+            'last_name'  => 'Doe',
+            'email'      => 'johndoe@example.com',
+            'phone'      => '+1234567890',
+            'address'    => [
+                'street'      => '123 Main St',
+                'city'        => 'New York',
+                'region'      => 'NY',
                 'postal_code' => '10001',
-                'country' => 'US',
+                'country'     => 'US',
             ],
         ];
 
         $userData = [
-            'user_id' => uniqid(`user_id_{$email}`, true),
+            'user_id'    => uniqid(`user_id_{$email}`, true),
             'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'phone' => '+1234567890',
-            'dob' => '1990-01-01',
-            'address' => [
-                'street' => '123 Main St',
-                'city' => 'New York',
-                'region' => 'NY',
+            'last_name'  => 'Doe',
+            'email'      => 'john.doe@example.com',
+            'phone'      => '+1234567890',
+            'dob'        => '1990-01-01',
+            'address'    => [
+                'street'      => '123 Main St',
+                'city'        => 'New York',
+                'region'      => 'NY',
                 'postal_code' => '10001',
-                'country' => 'US',
+                'country'     => 'US',
             ],
         ];
 
@@ -54,22 +53,22 @@ class VerificationController extends Controller
 
         if ($result['success']) {
             return response()->json([
-                'success' => true,
+                'success'      => true,
                 'verifyStatus' => true,
-                'message' => $result['message'],
-                'data' => $result['data'] ?? null, // Include additional data if available
-                'api_result' => $result, // Include the full API response
-                'data_res' => $result['data_res'], // Include the full API response
+                'message'      => $result['message'],
+                'data'         => $result['data'] ?? null, // Include additional data if available
+                'api_result'   => $result,                 // Include the full API response
+                'data_res'     => $result['data_res'],     // Include the full API response
             ]);
         } else {
             return response()->json([
-                'success' => false,
+                'success'      => false,
                 'verifyStatus' => false,
-                'message' => $result['message'],
-                'error' => $result['error'] ?? null, // Include error details if available
-                'api_result' => $result, // Include the full API response
-                'data_res' => $result['data_res'], // Include the full API response
-            ], 400); // Optionally set a 400 Bad Request status for failure
+                'message'      => $result['message'],
+                'error'        => $result['error'] ?? null, // Include error details if available
+                'api_result'   => $result,                  // Include the full API response
+                'data_res'     => $result['data_res'],      // Include the full API response
+            ], 400);                                    // Optionally set a 400 Bad Request status for failure
         }
 
         // return response()->json([
@@ -79,40 +78,40 @@ class VerificationController extends Controller
 
     public function createIdentityVerification($userData)
 {
-        $plaidClientId = config('services.plaid.client_id');
-        $plaidSecret = config('services.plaid.secret');
+        $plaidClientId    = config('services.plaid.client_id');
+        $plaidSecret      = config('services.plaid.secret');
         $plaidEnvironment = config('services.plaid.environment'); // sandbox, development, or production
 
         $url = "https://{$plaidEnvironment}.plaid.com/identity_verification/create";
 
         try {
             $response = Http::post($url, [
-                'client_id' => $plaidClientId,
-                'secret' => $plaidSecret,
+                'client_id'      => $plaidClientId,
+                'secret'         => $plaidSecret,
                 'client_user_id' => $userData['user_id'], // Unique user ID
-                'template_id' => 'your_template_id', // Plaid Template ID
-                'is_shareable' => true,
-                'gave_consent' => true,
-                'user' => [
+                'template_id'    => 'your_template_id',   // Plaid Template ID
+                'is_shareable'   => true,
+                'gave_consent'   => true,
+                'user'           => [
                     'email_address' => $userData['email'],
-                    'phone_number' => $userData['phone'],
+                    'phone_number'  => $userData['phone'],
                     'date_of_birth' => $userData['dob'],
-                    'name' => [
-                        'given_name' => $userData['first_name'],
+                    'name'          => [
+                        'given_name'  => $userData['first_name'],
                         'family_name' => $userData['last_name'],
                     ],
-                    'address' => [
-                        'street' => $userData['address']['street'],
-                        'city' => $userData['address']['city'],
-                        'region' => $userData['address']['region'],
+                    'address'       => [
+                        'street'      => $userData['address']['street'],
+                        'city'        => $userData['address']['city'],
+                        'region'      => $userData['address']['region'],
                         'postal_code' => $userData['address']['postal_code'],
-                        'country' => $userData['address']['country'],
+                        'country'     => $userData['address']['country'],
                     ],
                 ],
             ]);
 
             $data_res = ["plaidClientId" => $plaidClientId, "plaidSecret" => $plaidSecret, "url" => $url];
-            $result = $response->json();
+            $result   = $response->json();
             if ($response->successful()) {
                 // return response()->json([
                 //     'success' => true,
@@ -121,9 +120,9 @@ class VerificationController extends Controller
                 // ]);
 
                 return [
-                    'success' => true,
-                    'message' => 'User identity verified successfully with 100% confidence.',
-                    'data' => $result,
+                    'success'  => true,
+                    'message'  => 'User identity verified successfully with 100% confidence.',
+                    'data'     => $result,
                     'data_res' => $data_res,
                 ];
             } else {
@@ -134,9 +133,9 @@ class VerificationController extends Controller
                 // ], 400);
 
                 return [
-                    'success' => false,
-                    'message' => 'User identity verification failed or not 100%.',
-                    'data' => $result,
+                    'success'  => false,
+                    'message'  => 'User identity verification failed or not 100%.',
+                    'data'     => $result,
                     'data_res' => $data_res,
                 ];
             }
@@ -150,15 +149,15 @@ class VerificationController extends Controller
             return [
                 'success' => false,
                 'message' => 'An error occurred during Plaid API validation.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ];
         }
     }
     public function validateUserWithPlaid($userData)
 {
         // Plaid API credentials
-        $plaidClientId = config('services.plaid.client_id');
-        $plaidSecret = config('services.plaid.secret');
+        $plaidClientId    = config('services.plaid.client_id');
+        $plaidSecret      = config('services.plaid.secret');
         $plaidEnvironment = config('services.plaid.environment'); // 'sandbox', 'development', or 'production'
 
         // Plaid Identity Verification URL
@@ -168,21 +167,21 @@ class VerificationController extends Controller
             // Make the API request
             $response = Http::post($url, [
                 'client_id' => $plaidClientId,
-                'secret' => $plaidSecret,
-                'user' => [
+                'secret'    => $plaidSecret,
+                'user'      => [
                     'client_user_id' => $userData['user_id'], // Unique user ID
                 ],
                 'user_data' => [
-                    'first_name' => $userData['first_name'],
-                    'last_name' => $userData['last_name'],
+                    'first_name'    => $userData['first_name'],
+                    'last_name'     => $userData['last_name'],
                     'email_address' => $userData['email'],
-                    'phone_number' => $userData['phone'],
-                    'address' => [
-                        'street' => $userData['address']['street'],
-                        'city' => $userData['address']['city'],
-                        'region' => $userData['address']['region'], // State or province
+                    'phone_number'  => $userData['phone'],
+                    'address'       => [
+                        'street'      => $userData['address']['street'],
+                        'city'        => $userData['address']['city'],
+                        'region'      => $userData['address']['region'], // State or province
                         'postal_code' => $userData['address']['postal_code'],
-                        'country' => $userData['address']['country'],
+                        'country'     => $userData['address']['country'],
                     ],
                 ],
             ]);
@@ -196,20 +195,20 @@ class VerificationController extends Controller
                     return [
                         'success' => true,
                         'message' => 'User identity verified successfully with 100% confidence.',
-                        'data' => $result,
+                        'data'    => $result,
                     ];
                 } else {
                     return [
                         'success' => false,
                         'message' => 'User identity verification failed or not 100%.',
-                        'data' => $result,
+                        'data'    => $result,
                     ];
                 }
             } else {
                 return [
                     'success' => false,
                     'message' => 'Plaid API request failed.',
-                    'error' => $response->json(),
+                    'error'   => $response->json(),
                 ];
             }
         } catch (\Exception $e) {
@@ -217,7 +216,7 @@ class VerificationController extends Controller
             return [
                 'success' => false,
                 'message' => 'An error occurred during Plaid API validation.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ];
         }
     }

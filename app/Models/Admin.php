@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class Admin extends Authenticatable
 {
@@ -19,6 +20,7 @@ class Admin extends Authenticatable
         'phone',
         'password',
         'otp_code',
+        'profile_picture',
         'otp_expires_at',
         'otp_verified',
         'status',
@@ -56,7 +58,6 @@ class Admin extends Authenticatable
         return $this->roles()->whereIn('slug', $roleNames)->count() === count($roleNames);
     }
 
-
     // Helper method to determine if admin can perform specific actions
     public function canPerformAction($action)
     {
@@ -68,5 +69,25 @@ class Admin extends Authenticatable
         ];
 
         return isset($permissionMap[$action]) && $this->hasAnyRole($permissionMap[$action]);
+    }
+
+    public function getProfilePictureUrlAttribute()
+    {
+        if (!$this->profile_picture) {
+            return asset('assets/images/default-avatar.png');
+        }
+        
+        return Storage::url($this->profile_picture);
+    }
+
+       
+    /**
+     * Get the full name of the admin
+     *
+     * @return string
+     */
+    public function getFullNameAttribute()
+    {
+        return "{$this->first_name} {$this->last_name}";
     }
 }

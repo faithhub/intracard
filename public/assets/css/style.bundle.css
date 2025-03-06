@@ -34511,7 +34511,7 @@ fieldset:disabled .btn {
     --bs-light: #F8F6F2;
     --bs-primary: #210035;
     --bs-secondary: #F6F1E9;
-    --bs-success: #B8D935;
+    --bs-success: #35d94b;
     --bs-info: #4F55DA;
     --bs-warning: #E8C444;
     --bs-danger: #F06445;
@@ -34519,7 +34519,7 @@ fieldset:disabled .btn {
     --bs-primary-active: #a000f9;
     --bs-secondary-active: #B5B0A1;
     --bs-light-active: #F6F1E9;
-    --bs-success-active: #9FBE22;
+    --bs-success-active: #22be51;
     --bs-info-active: #383EBC;
     --bs-warning-active: #CFAB2A;
     --bs-danger-active: #DB5437;
@@ -34527,7 +34527,7 @@ fieldset:disabled .btn {
     --bs-primary-light: #a000f9;
     --bs-secondary-light: #F9F9F9;
     --bs-success-light: #e1fbdb;
-    --bs-info-light: #EFF0FF;
+    --bs-info-light: #d4d5e4;
     --bs-warning-light: #FDF4D6;
     --bs-danger-light: #FFF0ED;
     --bs-dark-light: #F9F9F9;
@@ -34560,7 +34560,7 @@ fieldset:disabled .btn {
     --bs-text-primary: #fcfcfc;
     --bs-text-secondary: #F6F1E9;
     --bs-text-light: #F8F6F2;
-    --bs-text-success: #B8D935;
+    --bs-text-success: #35d93a;
     --bs-text-info: #4F55DA;
     --bs-text-warning: #E8C444;
     --bs-text-danger: #F06445;

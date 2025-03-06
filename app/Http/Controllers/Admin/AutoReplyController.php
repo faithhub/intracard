@@ -31,7 +31,7 @@ class AutoReplyController extends Controller
             'response' => $request->response,
         ]);
 
-        return redirect()->route('admin.auto-replies.index')->with('success', 'Auto-reply created successfully.');
+        return back()->with('success', 'Auto-reply created successfully.');
     }
     
 
@@ -55,13 +55,13 @@ class AutoReplyController extends Controller
             'status' => $request->status,
         ]);
 
-        return redirect()->route('admin.auto-replies.index')->with('success', 'Auto-reply updated successfully.');
+        return back()->with('success', 'Auto-reply updated successfully.');
     }
 
     public function destroy(AutoReply $autoReply)
     {
         $autoReply->delete();
 
-        return redirect()->route('admin.auto-replies.index')->with('success', 'Auto-reply deleted successfully.');
+        return back()->with('success', 'Auto-reply deleted successfully.');
     }
 }

@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Models\PaymentSchedule;
 
 class TeamMemberController extends Controller
 {
@@ -81,11 +82,11 @@ class TeamMemberController extends Controller
             ->where('status', '!=', 'deactivated')
             ->count();
 
-        // if ($currentMembersCount >= 4) {
-        //     return response()->json([
-        //         'message' => 'Maximum team size (4) reached',
-        //     ], 422);
-        // }
+        if ($currentMembersCount >= 4) {
+            return response()->json([
+                'message' => 'Maximum team size (4) reached',
+            ], 422);
+        }
 
         // Validate total percentage equals 100
         $totalPercentage = $request->percentage +
@@ -430,6 +431,42 @@ class TeamMemberController extends Controller
                 'user_id' => $user->id,
                 'balance' => 0,
             ]);
+
+            $addressId = $member->team->address_id;
+            $teamId = $member->team->id;
+
+            $address = Address::find($member->team->address_id);
+
+            $recurringDay = $address->reoccurring_monthly_day;
+            $durationFrom = $address->duration_from;
+            $durationTo = $address->duration_to;
+            $houseAmount = $address->amount;
+            $paymentType = $user->account_goal; // rent, mortgage, or bill
+
+            // Validate recurring day
+            if (!is_numeric($recurringDay) || $recurringDay < 1 || $recurringDay > 31) {
+                $recurringDay = 1; // Default to 1 if invalid
+            }
+
+            // Use both IDs for payment schedule creation
+            $scheduleParams = [
+                'user_id' => $user->id,
+                'payment_type' => $paymentType,
+                'recurring_day' => (int) $recurringDay,
+                'amount' => $houseAmount,
+                'address_id' => $addressId,
+                'duration_from' => $durationFrom,
+                'duration_to' => $durationTo,
+                'status' => 'active',
+                'is_team_payment' => !is_null($teamId),
+                'team_id' => $teamId
+            ];
+
+            // Save the payment schedule
+            $paymentSchedule = PaymentSchedule::create($scheduleParams);
+
+            // Create reminders in the database
+            $createdReminders = $paymentSchedule->createReminders();
 
             // Send verification email
             Mail::to($user->email)->send(new RegistrationVerificationMail($user));

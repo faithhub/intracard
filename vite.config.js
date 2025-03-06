@@ -37,7 +37,8 @@ export default defineConfig({
     },
     plugins: [
         laravel({
-            input: ["resources/css/app.css", "resources/js/app.js"],
+            input: ["resources/css/app.css", "resources/js/app.js", 
+                'resources/js/admin-support.js'],
             refresh: true, // Automatically refresh the browser on changes
         }),
         vue(), // Vue plugin for Vite

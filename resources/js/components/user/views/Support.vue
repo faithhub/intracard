@@ -157,7 +157,7 @@
                                                     <div class="text-wrap">
                                                         <div class="text-subtitle-2">{{ message.file_name }}</div>
                                                         <div class="text-caption">{{ formatFileSize(message.file_size)
-                                                            }}</div>
+                                                        }}</div>
                                                     </div>
                                                 </a>
                                             </v-card>
@@ -313,7 +313,8 @@
 import { VMenu, VBtn, VIcon, VDatePicker } from 'vuetify/components';
 import { useToast } from "vue-toastification";
 import axios from "axios";
-import { ref, onMounted, watch, computed } from 'vue';
+// import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, onBeforeUnmount } from 'vue';
 
 export default {
     data() {
@@ -353,6 +354,9 @@ export default {
             isCreating: false,
             isSending: false,
             isLoadingTicket: false,
+
+
+            channelSubscriptions: [],
         };
     },
 
@@ -381,6 +385,7 @@ export default {
             return tickets;
         },
 
+
         formatDate(date) {
             return new Date(date).toLocaleDateString();
         },
@@ -406,16 +411,328 @@ export default {
         showDateFilter(val) {
             console.log("Menu open state:", val);
         },
-    },
-
-    watch: {
         selectedDateRange(newVal) {
             console.log('Selected Date Range:', newVal);
+        },
+
+        // Add a watcher for the selected ticket to set up real-time listeners
+        selectedTicket(newTicket, oldTicket) {
+            if (newTicket?.id !== oldTicket?.id && newTicket?.uuid) {
+                // Clear old subscriptions and set up new ones
+                this.setupTicketChannels();
+            }
         }
     },
 
     methods: {
 
+        /**
+         * Handle ticket updates received via real-time
+         */
+        handleTicketUpdate(data) {
+            console.log('Ticket update received:', data);
+
+            // Update the selected ticket if it matches
+            if (this.selectedTicket && this.selectedTicket.id === data.id) {
+                this.selectedTicket.status = data.status;
+
+                useToast().info(`Ticket status updated to ${data.status}`);
+            }
+
+            // Update the ticket in the sidebar list
+            const ticketIndex = this.tickets.findIndex(t => t.id === data.id);
+            if (ticketIndex !== -1) {
+                this.tickets[ticketIndex].status = data.status;
+                this.tickets[ticketIndex].updated_at = data.updated_at;
+            }
+        },
+
+        /**
+         * Handle ticket closure events received via real-time
+         */
+        handleTicketClosure(data) {
+            console.log('Ticket closure received:', data);
+
+            // Update the selected ticket if it matches
+            if (this.selectedTicket && this.selectedTicket.id === data.id) {
+                this.selectedTicket.status = data.status;
+                this.selectedTicket.closure = data.closure;
+
+                useToast().info(`Ticket has been marked as ${data.status}`);
+            }
+
+            // Update the ticket in the sidebar list
+            const ticketIndex = this.tickets.findIndex(t => t.id === data.id);
+            if (ticketIndex !== -1) {
+                this.tickets[ticketIndex].status = data.status;
+            }
+        },
+
+        /**
+         * Handle a new message received via real-time
+         */
+        handleNewMessage(data) {
+            console.log('New message received:', data);
+
+            // Skip our own messages (they're already added via the UI)
+            if (data.sender_id === this.user.id && data.sender_type !== 'admin') {
+                console.log('Ignoring own message');
+                return;
+            }
+
+            // Skip if we already have this message
+            if (this.messages.some(m => m.id === data.id)) {
+                console.log('Message already in the list');
+                return;
+            }
+
+            // Format the message to match our UI structure
+            const newMessage = {
+                id: data.id,
+                ticket_id: data.ticket_id,
+                sender_id: data.sender_id,
+                sender_name: data.sender?.first_name
+                    ? `${data.sender.first_name} ${data.sender.last_name}`.trim()
+                    : (data.sender_type === 'admin' ? 'Support Staff' : 'Unknown'),
+                message: data.message,
+                file_url: data.file_url,
+                file_name: data.file_name,
+                file_size: data.file_size,
+                created_at: data.created_at,
+            };
+
+            // Add the message to our list
+            this.messages.push(newMessage);
+
+            // Update the related ticket in the sidebar
+            const ticketIndex = this.tickets.findIndex(ticket => ticket.id === data.ticket_id);
+            if (ticketIndex !== -1) {
+                this.tickets[ticketIndex].last_message = data.message || 'File attachment';
+                this.tickets[ticketIndex].updated_at = data.created_at;
+            }
+
+            // Notify the user
+            useToast().info('New message received');
+
+            // Scroll to the new message
+            this.$nextTick(() => {
+                this.initChatMessagesScroll();
+            });
+        },
+
+        /**
+         * Clean up any existing listeners
+         */
+        clearExistingListeners() {
+            if (this.channelSubscriptions && this.channelSubscriptions.length > 0) {
+                console.log('Cleaning up existing listeners...');
+
+                this.channelSubscriptions.forEach(sub => {
+                    try {
+                        7
+                        console.log(`Unsubscribing from ${sub.name}`);
+
+                        if (typeof sub.channel.stopListening === 'function') {
+                            if (sub.events && Array.isArray(sub.events)) {
+                                sub.events.forEach(event => {
+                                    sub.channel.stopListening(event);
+                                });
+                            } else if (sub.event) {
+                                sub.channel.stopListening(sub.event);
+                            }
+                        }
+
+                        if (typeof sub.channel.unsubscribe === 'function') {
+                            sub.channel.unsubscribe();
+                        }
+                    } catch (error) {
+                        console.error(`Error cleaning up listener ${sub.name}:`, error);
+                    }
+                });
+
+                this.channelSubscriptions = [];
+            }
+        },
+
+        listenForNewTickets() {
+            // Unsubscribe from any existing tickets channel
+            const existingChannel = this.channelSubscriptions.find(sub => sub.name === 'tickets');
+            if (existingChannel) {
+                existingChannel.channel.unsubscribe();
+                this.channelSubscriptions = this.channelSubscriptions.filter(sub => sub.name !== 'tickets');
+            }
+
+            console.log('Subscribing to general tickets channel');
+
+            try {
+                // Listen on the global tickets channel
+                const ticketsChannel = window.Echo.channel('tickets');
+
+                ticketsChannel.listen('TicketCreated', (data) => {
+                    console.log('New ticket created:', data);
+
+                    // Only add if this ticket is for the current user
+                    if (data.created_by === this.user.id) {
+                        // Check if we already have this ticket
+                        if (!this.tickets.some(t => t.id === data.id)) {
+                            this.tickets.unshift({
+                                ...data,
+                                avatar: this.defaultAvatar,
+                                last_message: data.description || '',
+                            });
+
+                            useToast().info(`New ticket created: ${data.subject}`);
+                        }
+                    }
+                });
+
+                // Store the subscription for cleanup
+                this.channelSubscriptions.push({
+                    name: 'tickets',
+                    channel: ticketsChannel,
+                    event: 'TicketCreated'
+                });
+
+                console.log('Tickets listener set up successfully');
+            } catch (error) {
+                console.error('Error setting up tickets listener:', error);
+            }
+        },
+
+        setupTicketChannels() {
+            // First clear any existing ticket-specific channels
+            const ticketChannels = this.channelSubscriptions.filter(sub =>
+                sub.name.startsWith('ticket.') || sub.name === `ticket.${this.selectedTicket?.uuid}`);
+
+            ticketChannels.forEach(sub => {
+                sub.channel.unsubscribe();
+            });
+
+            this.channelSubscriptions = this.channelSubscriptions.filter(sub =>
+                !sub.name.startsWith('ticket.') && sub.name !== `ticket.${this.selectedTicket?.uuid}`);
+
+            if (!this.selectedTicket?.uuid) return;
+
+            console.log(`Subscribing to ticket channel: ticket.${this.selectedTicket.uuid}`);
+
+            try {
+                // Subscribe to the specific ticket channel
+                const ticketChannel = window.Echo.channel(`ticket.${this.selectedTicket.uuid}`);
+
+                // Listen for new messages
+                ticketChannel.listen('.MessageCreated', (data) => {
+                    console.log('New message received:', data);
+
+                    // Only add if it's not from the current user and not already in messages
+                    if (data.sender_id !== this.user.id && !this.messages.find(m => m.id === data.id)) {
+                        this.messages.push(data);
+
+                        // Update the UI
+                        this.$nextTick(() => {
+                            this.initChatMessagesScroll();
+                        });
+
+                        // Show a notification
+                        useToast().info('New message received');
+                    }
+                })
+                    .error((error) => {
+                        console.error('Channel subscription error:', error);
+                    });;
+
+                // Listen for ticket status updates
+                ticketChannel.listen('TicketUpdated', (data) => {
+                    console.log('Ticket updated:', data);
+
+                    // Update the selected ticket
+                    if (this.selectedTicket.id === data.id) {
+                        this.selectedTicket.status = data.status;
+
+                        useToast().info(`Ticket status updated to: ${data.status}`);
+
+                        // If the ticket was closed, fetch the closure details
+                        if (data.status === 'resolved' || data.status === 'unresolved') {
+                            this.selectTicket(this.selectedTicket.id);
+                        }
+                    }
+
+                    // Update in tickets list
+                    const ticketIndex = this.tickets.findIndex(t => t.id === data.id);
+                    if (ticketIndex !== -1) {
+                        this.tickets[ticketIndex].status = data.status;
+                    }
+                })
+                    .error((error) => {
+                        console.error('Channel subscription error:', error);
+                    });;
+
+                // Listen for ticket closure events
+                ticketChannel.listen('TicketClosed', (data) => {
+                    console.log('Ticket closed:', data);
+
+                    if (this.selectedTicket && this.selectedTicket.id === data.id) {
+                        this.selectedTicket.status = data.status;
+                        this.selectedTicket.closure = data.closure;
+
+                        useToast().info(`Ticket has been marked as ${data.status}`);
+                    }
+
+                    // Update in tickets list
+                    const ticketIndex = this.tickets.findIndex(t => t.id === data.id);
+                    if (ticketIndex !== -1) {
+                        this.tickets[ticketIndex].status = data.status;
+                    }
+                })
+                    .error((error) => {
+                        console.error('Channel subscription error:', error);
+                    });;
+
+                // Add to tracked subscriptions
+                this.channelSubscriptions.push({
+                    name: `ticket.${this.selectedTicket.uuid}`,
+                    channel: ticketChannel
+                });
+
+                console.log(`Successfully subscribed to ticket.${this.selectedTicket.uuid} channel`);
+            } catch (error) {
+                console.error(`Failed to subscribe to ticket.${this.selectedTicket.uuid} channel:`, error);
+            }
+        },
+
+        listenForNotifications() {
+            // Unsubscribe from any existing notifications channel
+            const existingChannel = this.channelSubscriptions.find(sub => sub.name === 'notifications');
+            if (existingChannel) {
+                existingChannel.channel.unsubscribe();
+                this.channelSubscriptions = this.channelSubscriptions.filter(sub => sub.name !== 'notifications');
+            }
+
+            console.log('Subscribing to notifications channel');
+
+            try {
+                const notificationsChannel = window.Echo.channel('notifications');
+
+                notificationsChannel.listen('NotificationEvent', (data) => {
+                    console.log('Notification received:', data);
+
+                    useToast().info(data.message, {
+                        timeout: 8000,
+                        position: "top-right",
+                    });
+                });
+
+                // Store the subscription for cleanup
+                this.channelSubscriptions.push({
+                    name: 'notifications',
+                    channel: notificationsChannel,
+                    event: 'NotificationEvent'
+                });
+
+                console.log('Notifications listener set up successfully');
+            } catch (error) {
+                console.error('Error setting up notifications listener:', error);
+            }
+        },
 
         // Handle date selection
         onDateSelected() {
@@ -494,7 +811,59 @@ export default {
         },
 
         async selectTicket(ticketId) {
+            // this.isLoadingTicket = true;
+            // try {
+            //     const ticketResponse = await axios.get(`/api/tickets/${ticketId}`);
+            //     this.selectedTicket = ticketResponse.data;
+
+            //     const messagesResponse = await axios.get(`/api/tickets/${ticketId}/messages`);
+            //     this.messages = messagesResponse.data.map(message => ({
+            //         ...message,
+            //         sender_name: message.sender_name || 'Unknown',
+            //         message: message.message || '',
+            //         created_at: message.created_at || '',
+            //     }));
+            //     this.$nextTick(() => {
+            //         this.initChatMessagesScroll();
+            //     });
+            // } catch (error) {
+            //     useToast().error("Failed to load ticket");
+            // } finally {
+            //     this.isLoadingTicket = false;
+            // }
+
+            // this.isLoadingTicket = true;
+
+            // try {
+            //     const ticketResponse = await axios.get(`/api/tickets/${ticketId}`);
+            //     this.selectedTicket = ticketResponse.data;
+
+            //     const messagesResponse = await axios.get(`/api/tickets/${ticketId}/messages`);
+            //     this.messages = messagesResponse.data.map(message => ({
+            //         ...message,
+            //         sender_name: message.sender_name || 'Unknown',
+            //         message: message.message || '',
+            //         created_at: message.created_at || '',
+            //     }));
+
+            //     // Set up real-time listeners for this ticket
+            //     if (this.selectedTicket?.uuid) {
+            //         // Clear existing listeners and set up new ones for this ticket
+            //         this.clearExistingListeners();
+            //         this.setupRealTimeListeners();
+            //     }
+
+            //     this.$nextTick(() => {
+            //         this.initChatMessagesScroll();
+            //     });
+            // } catch (error) {
+            //     useToast().error("Failed to load ticket");
+            // } finally {
+            //     this.isLoadingTicket = false;
+            // }
+
             this.isLoadingTicket = true;
+
             try {
                 const ticketResponse = await axios.get(`/api/tickets/${ticketId}`);
                 this.selectedTicket = ticketResponse.data;
@@ -506,6 +875,19 @@ export default {
                     message: message.message || '',
                     created_at: message.created_at || '',
                 }));
+
+                // Set up real-time listeners with multiple approaches
+                if (this.selectedTicket?.uuid) {
+                    // Clear existing listeners
+                    this.clearChannelSubscriptions();
+
+                    // Try both listener setup methods to ensure it works
+                    this.setupTicketListeners(this.selectedTicket.uuid);
+
+                    // Also listen for raw events
+                    this.setupRawEventListener();
+                }
+
                 this.$nextTick(() => {
                     this.initChatMessagesScroll();
                 });
@@ -513,6 +895,150 @@ export default {
                 useToast().error("Failed to load ticket");
             } finally {
                 this.isLoadingTicket = false;
+            }
+        },
+
+
+        /**
+         * Listen for raw Pusher events to debug
+         */
+        setupRawEventListener() {
+            const pusher = window.Echo?.connector?.pusher;
+            if (!pusher) return;
+
+            // Listen for all events on all channels
+            pusher.bind_global((eventName, data) => {
+                // Only log message related events to avoid flooding console
+                if (eventName.includes('Message') || eventName.includes('message')) {
+                    console.log(`🔔 Raw Pusher event: ${eventName}`, data);
+
+                    // Try to handle the event if it might be a message
+                    if (data && data.message && data.ticket_id) {
+                        console.log('This looks like a message, trying to handle it...');
+                        this.handleNewMessage(data);
+                    }
+                }
+            });
+        },
+
+        setupTicketListeners(uuid) {
+            console.log(`Setting up listeners for ticket ${uuid}`);
+
+            if (typeof window.Echo === 'undefined') {
+                console.error('Echo is not available for ticket listeners');
+                return;
+            }
+
+            try {
+                // Clean up any existing subscriptions for this ticket
+                this.cleanupChannelSubscription(`ticket.${uuid}`);
+
+                const channelName = `ticket.${uuid}`;
+
+                // Set up the channel
+                const ticketChannel = window.Echo.channel(channelName);
+
+                console.log(channelName);
+
+                // Add error handler for the channel
+                ticketChannel.error((error) => {
+                    console.error(`Channel error on ${channelName}:`, error);
+                    // Maybe reconnect or show user a notification
+                });
+
+                ticketChannel.listen('MessageCreated', (data) => {
+                    console.log('MessageCreated event received:', data);
+                    void this.handleNewMessage(data); // void ensures no value is returned
+                });
+
+                ticketChannel.listenToAll((eventName, data) => {
+                    console.log(`All ticket events - ${eventName}:`, data);
+
+                    if ((eventName.includes('message') || eventName.includes('Message')) &&
+                        data && (data.message || data.id)) {
+                        void this.handleNewMessage(data); // void ensures no value is returned
+                    }
+                });
+
+
+                // Store subscription for cleanup
+                this.channelSubscriptions.push({
+                    name: channelName,
+                    channel: ticketChannel,
+                    events: ['MessageCreated']
+                });
+
+                console.log(`Successfully subscribed to ${channelName}`);
+            } catch (error) {
+                console.error(`Error setting up ticket listeners for ${uuid}:`, error);
+            }
+        },
+
+        // Add this helper method if you don't already have it
+        cleanupChannelSubscription(channelName) {
+            const index = this.channelSubscriptions.findIndex(sub => sub.name === channelName);
+            if (index !== -1) {
+                try {
+                    console.log(`Cleaning up existing subscription to ${channelName}`);
+                    window.Echo.leave(channelName);
+                } catch (e) {
+                    console.warn(`Error leaving channel ${channelName}:`, e);
+                }
+                this.channelSubscriptions.splice(index, 1);
+            }
+        },
+
+        /**
+         * Clean up channel subscriptions
+         */
+        clearChannelSubscriptions() {
+            if (!this.channelSubscriptions) this.channelSubscriptions = [];
+
+            this.channelSubscriptions.forEach(sub => {
+                if (sub.channel) {
+                    // Unsubscribe from each event
+                    if (Array.isArray(sub.events)) {
+                        sub.events.forEach(event => {
+                            try {
+                                sub.channel.stopListening(event);
+                            } catch (error) {
+                                // Ignore errors when cleaning up
+                            }
+                        });
+                    }
+
+                    // Leave the channel if possible
+                    if (typeof sub.channel.leave === 'function') {
+                        try {
+                            sub.channel.leave();
+                        } catch (error) {
+                            // Ignore errors when cleaning up
+                        }
+                    }
+                }
+            });
+
+            this.channelSubscriptions = [];
+        },
+
+        // Add diagnostic logging method
+        logConnectionStatus() {
+            if (window.Echo && window.Echo.connector && window.Echo.connector.pusher) {
+                const connectionState = window.Echo.connector.pusher.connection.state;
+                console.log(`Pusher connection state: ${connectionState}`);
+
+                if (connectionState === 'connected') {
+                    console.log(`Socket ID: ${window.Echo.connector.pusher.connection.socket_id}`);
+
+                    // Log subscribed channels
+                    const channels = window.Echo.connector.pusher.channels.channels;
+                    console.log('Subscribed channels:');
+                    for (const channelName in channels) {
+                        console.log(`- ${channelName}: ${channels[channelName].subscribed ? 'Subscribed' : 'Pending'}`);
+                    }
+                }
+            } else {
+                console.error('Echo or Pusher not properly initialized');
             }
         },
 
@@ -673,11 +1199,101 @@ export default {
     },
 
     mounted() {
+        if (window.Echo && window.Echo.connector && window.Echo.connector.pusher) {
+            const pusher = window.Echo.connector.pusher;
+
+            console.log('Echo instance found, socket ID:', window.Echo.socketId());
+            console.log('Pusher connection state:', pusher.connection.state);
+
+            // Global event listener for all Pusher events
+            pusher.bind_global((eventName, data) => {
+                // Only log message-related events to prevent console spam
+                if (eventName.includes('Message') ||
+                    eventName.includes('message') ||
+                    eventName.startsWith('pusher:')) {
+                    console.log(`Global Pusher event: ${eventName}`, data);
+
+                    // Try to detect and handle message events
+                    if (data && (data.message || data.id)) {
+                        console.log('This looks like a message event, attempting to process');
+                        if (typeof this.handleNewMessage === 'function') {
+                            this.handleNewMessage(data);
+                        }
+                    }
+                }
+            });
+
+            // Direct subscription test
+            console.log(window.Echo, 'window.Echo');
+
+            if (window.Echo) {
+                const testChannel = window.Echo.channel('ticket.0b07acd7-f834-4182-b2fa-d2cc431ebccc');
+
+                testChannel.listen('MessageCreated', (data) => {
+                    console.log('TEST - Message received!', data);
+                    alert('Message received: ' + data.message);
+                });
+
+                testChannel.listenToAll((event, data) => {
+                    console.log(`TEST - Event received: ${event}`, data);
+                });
+
+                console.log('Test listeners set up successfully');
+            }
+
+            // Connection status monitoring
+            pusher.connection.bind('state_change', (states) => {
+                console.log(`Pusher connection changed: ${states.previous} → ${states.current}`);
+            });
+
+            pusher.connection.bind('connected', () => {
+                console.log('✅ Pusher connected! Socket ID:', pusher.connection.socket_id);
+            });
+
+            pusher.connection.bind('error', (error) => {
+                console.error('❌ Pusher connection error:', error);
+            });
+        } else {
+            console.error('Echo or Pusher not properly initialized');
+        }
+
+        // Fetch tickets and initialize
         this.fetchTickets();
+
+        // Set up a periodic connection check
+        this.connectionCheckInterval = setInterval(() => {
+            this.logConnectionStatus();
+        }, 30000); // Check every 30 seconds
+
         this.$nextTick(() => {
             this.initChatMessagesScroll();
         });
+
+        // this.fetchTickets();
+        // this.$nextTick(() => {
+        //     this.initChatMessagesScroll();
+        // });
     },
+    beforeUnmount() {
+        // Clean up subscriptions when component is destroyed
+        if (this.channelSubscriptions.length > 0) {
+            console.log('Cleaning up channel subscriptions');
+
+            this.channelSubscriptions.forEach(sub => {
+                if (sub.channel && typeof sub.channel.unsubscribe === 'function') {
+                    sub.channel.unsubscribe();
+                    console.log(`Unsubscribed from ${sub.name}`);
+                }
+            });
+
+            this.channelSubscriptions = [];
+        }
+
+        // Clear the connection check interval
+        if (this.connectionCheckInterval) {
+            clearInterval(this.connectionCheckInterval);
+        }
+    }
 };
 </script>
 

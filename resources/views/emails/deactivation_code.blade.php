@@ -1,37 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account Deactivation Code</title>
+    <link href='https://fonts.googleapis.com/css?family=Kodchasan' rel='stylesheet'>
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
         }
+
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 200px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            color: #333;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .verification-code {
+            text-align: center;
+            margin: 25px 0;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 6px;
+            color: #f44336;
+            padding: 15px;
+            background-color: #f4f8f9;
             border-radius: 8px;
         }
-        .button {
-            display: inline-block;
-            padding: 10px 20px;
-            color: #ffffff;
-            background-color: #f44336;
-            text-decoration: none;
-            border-radius: 4px;
+
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #888888;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h2>Hello,</h2>
-        <p>We received a request to deactivate your account. For security reasons, please use the following code to confirm your request:</p>
-        <h3 style="text-align: center; color: #f44336;">{{ $code }}</h3>
-        <p>If you did not request this, please ignore this email or contact our support team.</p>
-        <p>Thank you,<br>The {{ config('app.name') }} Team</p>
+        <div class="header">
+            <img src="{{ asset('assets/logos/intracard_email.png') }}" class="logo" alt="IntraCard Logo">
+        </div>
+        <div class="content">
+            <h2>Hello,</h2>
+            
+            <p>We received a request to deactivate your account. For security reasons, please use the following code to confirm your request:</p>
+
+            <div class="verification-code">
+                {{ $code }}
+            </div>
+
+            <p>If you did not request this, please ignore this email or contact our support team immediately at <a href="mailto:hello@intracard.ca">hello@intracard.ca</a>.</p>
+
+            <p>For security reasons, please do not share this code with anyone.</p>
+
+            <p>Thank you,<br>
+                The {{ config('app.name') }} Team</p>
+        </div>
+        <div class="footer">
+            <p>© {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+        </div>
     </div>
 </body>
+
 </html>

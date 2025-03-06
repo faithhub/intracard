@@ -1,5 +1,26 @@
 @extends('admin.app-admin')
 @section('content')
+
+
+    <style>
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+        }
+
+        .dropdown-item:active {
+            color: inherit;
+        }
+
+        .dropdown-item.text-danger:hover {
+            background-color: #fff5f5;
+        }
+
+        .modal-header .btn-close-white {
+            filter: brightness(0) invert(1);
+        }
+    </style>
     <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="card">
             <div class="card-header border-0">
@@ -86,8 +107,10 @@
                                     <!-- Date Filters -->
                                     <div class="mb-5">
                                         <label class="form-label fs-6 fw-semibold">Date Range Filter:</label>
-                                        <input type="date" name="start_date" value="{{ request('start_date') }}" class="form-control">
-                                        <input type="date" name="end_date" value="{{ request('end_date') }}" class="form-control mt-2">
+                                        <input type="date" name="start_date" value="{{ request('start_date') }}"
+                                            class="form-control">
+                                        <input type="date" name="end_date" value="{{ request('end_date') }}"
+                                            class="form-control mt-2">
                                     </div>
 
                                     <!-- Actions -->
@@ -194,37 +217,40 @@
                                     <td>
                                         <div class="badge badge-light-warning fw-bold">Pending</div>
                                     </td>
-                                    <td>{{ $user->created_at->format('d M Y, h:i A') }}</td><td class="text-end">
-                                        <a href="#" class="btn btn-light btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+                                    <td>{{ $user->created_at->format('d M Y, h:i A') }}</td>
+                                    <td class="text-end">
+                                        <a href="#" class="btn btn-light btn-sm" data-kt-menu-trigger="click"
+                                            data-kt-menu-placement="bottom-end">
                                             Actions
                                             <i class="fa fa-chevron-down fs-5 ms-1"></i>
                                         </a>
-                                        
+
                                         <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4"
                                             data-kt-menu="true">
                                             <!--begin::Menu item-->
                                             <div class="menu-item px-3">
-                                                <a href="{{ route('admin.users.view', $user->uuid) }}" class="menu-link px-3">
+                                                <a href="{{ route('admin.users.view', $user->uuid) }}"
+                                                    class="menu-link px-3">
                                                     View
                                                 </a>
                                             </div>
                                             <!--end::Menu item-->
-                                    
+
                                             <!--begin::Menu item-->
                                             <div class="menu-item px-3">
-                                                <button type="button" class="menu-link px-3" style="border:0; background:none; width:100%; text-align:left;"
+                                                <button type="button" class="menu-link px-3"
+                                                    style="border:0; background:none; width:100%; text-align:left;"
                                                     onclick="confirmDelete('{{ $user->uuid }}', '{{ $user->first_name }} {{ $user->last_name }}')">
                                                     Delete
                                                 </button>
                                             </div>
                                             <!--end::Menu item-->
                                         </div>
-                                    
+
                                         <!-- Hidden Delete Form -->
-                                        <form id="delete-form-{{ $user->uuid }}" 
-                                              action="{{ route('admin.users.destroy', $user->uuid) }}" 
-                                              method="POST" 
-                                              class="d-none">
+                                        <form id="delete-form-{{ $user->uuid }}"
+                                            action="{{ route('admin.users.destroy', $user->uuid) }}" method="POST"
+                                            class="d-none">
                                             @csrf
                                             @method('DELETE')
                                         </form>
@@ -243,87 +269,181 @@
     </div>
 
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Delete Confirmation Modal -->
+    {{-- <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete user: <strong id="userName"></strong>?</p>
+                    <p class="mb-0 text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"
+                            aria-hidden="true"></span>
+                        Delete
+                    </button>
+                </div>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete user: <strong id="userName"></strong>?</p>
-                <p class="mb-0 text-muted">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                    <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
-                    Delete
-                </button>
+        </div>
+    </div> --}}
+
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header py-5 px-4 border-1">
+                    <h5 class="modal-title px-3 fs-6" id="deleteModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-1 px-5 text-muted">
+                    Are you sure you want to delete <span id="userName" class="fw-bold"></span>?
+                    <p class="mt-2 small">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer py-4 px-5 border-1">
+                    <button type="button" class="btn btn-light text-muted" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <span class="spinner-border spinner-border-sm d-none me-1" role="status"
+                            aria-hidden="true"></span>
+                        Delete
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
- <!-- jQuery -->
- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
- <!-- DataTables JS -->
- <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
-
- <!-- Include DataTables Bootstrap CSS -->
- <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
-
- <!-- Include DataTables Bootstrap JS -->
- <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
-
- <!-- DataTables CSS -->
- <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css">
-
-
 
     <script>
+        // Delete user modal management
+        let deleteModal;
         let deleteForm;
-let deleteModal;
-let confirmDeleteBtn;
-let deleteSpinner;
+        let confirmDeleteBtn;
+        let deleteSpinner;
 
-document.addEventListener('DOMContentLoaded', function() {
-    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    deleteSpinner = confirmDeleteBtn.querySelector('.spinner-border');
-});
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize modal
+            deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-function confirmDelete(uuid, name) {
-    // Set the user name in the modal
-    document.getElementById('userName').textContent = name;
-    
-    // Store the form reference
-    deleteForm = document.getElementById('delete-form-' + uuid);
-    
-    // Show the modal
-    deleteModal.show();
-    
-    // Add click event to confirm button
-    confirmDeleteBtn.addEventListener('click', submitDelete);
-}
+            // Get button and spinner references
+            confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            if (confirmDeleteBtn) {
+                deleteSpinner = confirmDeleteBtn.querySelector('.spinner-border');
+            }
+        });
 
-function submitDelete() {
-    // Show spinner and disable button
-    deleteSpinner.classList.remove('d-none');
-    confirmDeleteBtn.disabled = true;
-    
-    // Submit the form
-    deleteForm.submit();
-}
+        // Function to show delete confirmation modal
+        function confirmDelete(uuid, name) {
+            // Set the user name in the modal
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement) {
+                userNameElement.textContent = name;
+            }
 
-// Reset modal state when hidden
-document.getElementById('deleteModal').addEventListener('hidden.bs.modal', function () {
-    deleteSpinner.classList.add('d-none');
-    confirmDeleteBtn.disabled = false;
-    confirmDeleteBtn.removeEventListener('click', submitDelete);
-});
+            // Store the form reference
+            deleteForm = document.getElementById('delete-form-' + uuid);
+
+            if (!deleteForm) {
+                console.error('Delete form not found for UUID:', uuid);
+                return;
+            }
+
+            // Show the modal
+            deleteModal.show();
+
+            // Add click event to confirm button
+            if (confirmDeleteBtn) {
+                // Remove previous event listener to prevent duplicates
+                confirmDeleteBtn.removeEventListener('click', processDelete);
+                // Add the event listener
+                confirmDeleteBtn.addEventListener('click', processDelete);
+            }
+        }
+
+        // Process the delete action
+        function processDelete() {
+            // Show spinner and disable button
+            if (deleteSpinner) {
+                deleteSpinner.classList.remove('d-none');
+            }
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.disabled = true;
+            }
+
+            // Get the form action URL and token
+            const url = deleteForm.getAttribute('action');
+            const token = deleteForm.querySelector('input[name="_token"]').value;
+
+            // Create fetch request instead of submitting form
+            fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: new URLSearchParams({
+                        '_method': 'DELETE',
+                        '_token': token
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide the modal
+                    deleteModal.hide();
+
+                    // Show success message
+                    Swal.fire({
+                        title: 'Success!',
+                        text: data.message || 'User deleted successfully',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Redirect to onboarding page
+                        window.location.href = '/admin/onboarding';
+                    });
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+
+                    // Hide the modal
+                    deleteModal.hide();
+
+                    // Show error message
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to delete user. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                })
+                .finally(() => {
+                    // Reset button state
+                    if (deleteSpinner) {
+                        deleteSpinner.classList.add('d-none');
+                    }
+                    if (confirmDeleteBtn) {
+                        confirmDeleteBtn.disabled = false;
+                    }
+                });
+        }
+
+        // Reset modal state when hidden
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteModalElement = document.getElementById('deleteModal');
+            if (deleteModalElement) {
+                deleteModalElement.addEventListener('hidden.bs.modal', function() {
+                    if (deleteSpinner) {
+                        deleteSpinner.classList.add('d-none');
+                    }
+                    if (confirmDeleteBtn) {
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteBtn.removeEventListener('click', processDelete);
+                    }
+                });
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
             const exportForm = document.getElementById('kt_modal_export_users_form');
@@ -503,23 +623,18 @@ document.getElementById('deleteModal').addEventListener('hidden.bs.modal', funct
         });
     </script>
 
-<style>
-    .dropdown-item {
-        display: flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-    }
-    
-    .dropdown-item:active {
-        color: inherit;
-    }
-    
-    .dropdown-item.text-danger:hover {
-        background-color: #fff5f5;
-    }
-    
-    .modal-header .btn-close-white {
-        filter: brightness(0) invert(1);
-    }
-    </style>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+
+    <!-- Include DataTables Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
+
+    <!-- Include DataTables Bootstrap JS -->
+    <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css">
 @endsection

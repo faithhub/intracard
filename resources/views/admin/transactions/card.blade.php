@@ -171,16 +171,16 @@
                                     </td>
                                     <td>
                                         @isset($transaction->card)
-                                            <span class="text-capitalize">{{ $transaction->card->name ?? 'N/A' }}</span>
+                                            <span class="text-capitalize">{{ $transaction->card->name_on_card ?? 'N/A' }}</span>
                                         @else
                                             <span class="text-muted">Unknown Card</span>
                                         @endisset
                                     </td>
                                     <td>
-                                        {{ number_format($transaction->amount, 2) }}
+                                        ${{ number_format($transaction->amount, 2) }}
                                     </td>
                                     <td>
-                                        {{ number_format($transaction->charge, 2) }}
+                                        ${{ number_format($transaction->charge, 2) }}
                                     </td>
                                     <td>
                                         @if ($transaction->type === 'credit')

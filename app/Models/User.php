@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -68,20 +67,20 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'first_name' => 'encrypted', // Encrypt first name
-            'last_name' => 'encrypted', // Encrypt last name
-            'middle_name' => 'encrypted', // Encrypt middle name
-            'date_deactivated' => 'datetime',
-            // 'email' => 'encrypted',      // Encrypt email
-            // 'phone' => 'encrypted',      // Encrypt phone
-            // 'status' => 'encrypted',     // Encrypt status
-            // 'account_goal' => 'encrypted', // Encrypt account goal
-            // 'account_type' => 'encrypted', // Encrypt account type
-            // 'payment_setup' => 'encrypted', // Encrypt payment setup
-            // 'otp_code' => 'encrypted',   // Encrypt OTP code
-            'otp_verified' => 'boolean', // Cast OTP verified to boolean
+            'first_name'        => 'encrypted', // Encrypt first name
+            'last_name'         => 'encrypted', // Encrypt last name
+            'middle_name'       => 'encrypted', // Encrypt middle name
+            'date_deactivated'  => 'datetime',
+                                               // 'email' => 'encrypted',      // Encrypt email
+                                               // 'phone' => 'encrypted',      // Encrypt phone
+                                               // 'status' => 'encrypted',     // Encrypt status
+                                               // 'account_goal' => 'encrypted', // Encrypt account goal
+                                               // 'account_type' => 'encrypted', // Encrypt account type
+                                               // 'payment_setup' => 'encrypted', // Encrypt payment setup
+                                               // 'otp_code' => 'encrypted',   // Encrypt OTP code
+            'otp_verified'      => 'boolean',  // Cast OTP verified to boolean
             'email_verified_at' => 'datetime', // Handle email verified datetime
-            'password' => 'hashed', // Automatically hash password
+            'password'          => 'hashed',   // Automatically hash password
         ];
     }
 
@@ -104,7 +103,7 @@ class User extends Authenticatable
 
     public function tickets()
     {
-        return $this->belongsToMany(Ticket::class, 'ticket_participants');
+        return $this->hasMany(Ticket::class, 'created_by');
     }
     public function getRouteKeyName()
     {
@@ -154,7 +153,8 @@ class User extends Authenticatable
         return $this->hasMany(TeamMember::class);
     }
     public function getHasAddressAttribute()
-{
-    return $this->address()->exists();
-}
+    {
+        return $this->address()->exists();
+    }
+
 }

@@ -266,6 +266,9 @@ function showToast(message, type) {
     toast.setAttribute("aria-live", "assertive");
     toast.setAttribute("aria-atomic", "true");
 
+    // Add margin to the bottom of each toast
+    toast.style.marginBottom = "10px";
+
     // Define icons and styles based on type
     let icon, backgroundColor, textColor, borderColor;
 
@@ -696,7 +699,7 @@ function validateNumericInput(inputElement) {
     }
 }
 
-function toggleEFTInput() {
+function toggleEFTInput_old() {
     const nextButton = document.getElementById("nextButton");
     const EFTInputdiv = document.getElementById("EFTInputdiv");
     const mortgageChequeInputDiv = document.getElementById(
@@ -743,6 +746,95 @@ function toggleEFTInput() {
             validateFields(mortgageChequeInputDiv); // Validate fields inside mortgageChequeInputDiv
             addInputEventListeners(mortgageChequeInputDiv); // Add input event listeners
         }
+    }
+}
+
+function toggleEFTInput() {
+    try {
+        const nextButton = document.getElementById("nextButton");
+        const EFTInputdiv = document.getElementById("EFTInputdiv");
+        const mortgageChequeInputDiv = document.getElementById("mortgageChequeInputDiv");
+        const selectedOption = document.querySelector('input[name="mortgage_financer_account_mode"]:checked');
+        
+        // Initialize button state
+        if (nextButton) nextButton.disabled = true;
+        
+        // Validation function with improved error handling
+        function validateFields(container) {
+            if (!container) return false;
+            
+            let isValid = true;
+            try {
+                const requiredFields = container.querySelectorAll("[data-required]");
+                
+                requiredFields.forEach((field) => {
+                    if (field.value.trim() === "") {
+                        field.classList.add("is-invalid");
+                        isValid = false;
+                    } else {
+                        field.classList.remove("is-invalid");
+                    }
+                });
+                
+                // Update button state
+                if (nextButton) nextButton.disabled = !isValid;
+                return isValid;
+            } catch (error) {
+                console.error("Error during validation:", error);
+                return false;
+            }
+        }
+        
+        // Add event listeners for real-time validation
+        function addInputEventListeners(container) {
+            if (!container) return;
+            
+            try {
+                const requiredFields = container.querySelectorAll("[data-required]");
+                
+                requiredFields.forEach((field) => {
+                    // Remove existing listeners first to prevent duplicates
+                    field.removeEventListener("input", () => validateFields(container));
+                    field.removeEventListener("change", () => validateFields(container));
+                    
+                    // Add new listeners
+                    field.addEventListener("input", () => validateFields(container));
+                    field.addEventListener("change", () => validateFields(container));
+                    
+                    // Also listen to data-field changes if you have custom attributes
+                    if (field.hasAttribute("data-field")) {
+                        const observer = new MutationObserver(() => validateFields(container));
+                        observer.observe(field, { 
+                            attributes: true, 
+                            attributeFilter: ['data-field', 'data-value'] 
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error("Error setting up event listeners:", error);
+            }
+        }
+        
+        // Toggle visibility based on selected option
+        if (selectedOption) {
+            if (EFTInputdiv) EFTInputdiv.style.display = "none";
+            if (mortgageChequeInputDiv) mortgageChequeInputDiv.style.display = "none";
+            
+            if (selectedOption.value === "EFT" && EFTInputdiv) {
+                EFTInputdiv.style.display = "block";
+                validateFields(EFTInputdiv);
+                addInputEventListeners(EFTInputdiv);
+            } else if (selectedOption.value === "mortgage_cheque" && mortgageChequeInputDiv) {
+                mortgageChequeInputDiv.style.display = "block";
+                validateFields(mortgageChequeInputDiv);
+                addInputEventListeners(mortgageChequeInputDiv);
+            }
+        }
+    } catch (error) {
+        console.error("Error in toggleEFTInput function:", error);
+        // Fallback to ensure button is enabled in case of errors
+        const nextButton = document.getElementById("nextButton");
+        if (nextButton) nextButton.disabled = false;
     }
 }
 
@@ -1124,7 +1216,7 @@ function displayCoApplicants(type) {
             : "#applicantsContainer2 .addNewApplicant2";
     const coApplicants = document.querySelectorAll(containerId);
 
-    console.log(coApplicants, "coApplicants");
+    // console.log(coApplicants, "coApplicants");
 
     coApplicants.forEach((applicant, index) => {
         const firstName =
@@ -1157,7 +1249,7 @@ function displayCoApplicants(type) {
             ).value || "N/A"
         );
 
-        console.log(coApplicants);
+        // console.log(coApplicants);
 
         const coApplicantDiv = document.createElement("div");
         coApplicantDiv.classList.add("mb-3", "p-3", "border", "rounded");
@@ -1191,6 +1283,158 @@ function togglePasswordVisibility(fieldId, toggleButton) {
     }
 }
 
+function validatePostalCode() {
+    const postalCodeInput = document.getElementById('postal-code');
+    const postalCode = postalCodeInput.value.trim();
+    const postalCodeError = document.querySelector('[data-error-id="postal_codeError"]');
+
+    // Limit input to 7 characters (including space)
+    if (postalCode.replace(/\s/g, '').length > 6) {
+        postalCodeInput.value = postalCode.replace(/\s/g, '').slice(0, 6);
+    }
+
+    // Regular expression for Canadian postal code format (A1A 1A1)
+    const postalCodeRegex = /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTVWXYZ] \d[ABCEGHJ-NPRSTVWXYZ]\d$/i;
+    
+    // Remove any spaces or hyphens
+    const formattedPostalCode = postalCode.replace(/[-\s]/g, '').toUpperCase();
+    
+    // Reformat with a space in the middle
+    const formattedWithSpace = formattedPostalCode.length === 6 
+        ? formattedPostalCode.slice(0,3) + ' ' + formattedPostalCode.slice(3) 
+        : postalCode;
+
+    // Validate using regex
+    const isValid = postalCodeRegex.test(formattedWithSpace);
+
+    if (isValid) {
+        // Update input with formatted postal code
+        postalCodeInput.value = formattedWithSpace;
+        postalCodeInput.classList.remove('is-invalid');
+        if (postalCodeError) {
+            postalCodeError.textContent = '';
+            postalCodeError.style.display = 'none';
+        }
+        return true;
+    } else {
+        // Invalid postal code
+        postalCodeInput.classList.add('is-invalid');
+        if (postalCodeError) {
+            postalCodeError.textContent = 'Please enter a valid Canadian postal code (e.g., A1A 1A1)';
+            postalCodeError.style.display = 'block';
+        }
+        return false;
+    }
+}
+
+// Add input event listener to enforce character limit and formatting
+document.getElementById('postal-code').addEventListener('input', function(e) {
+    // Remove non-alphanumeric characters
+    this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+    
+    // Limit to 6 characters before formatting
+    if (this.value.length > 6) {
+        this.value = this.value.slice(0, 6);
+    }
+});
+
+function checkVerificationStatus() {
+    // Immediately show loading state
+    Swal.fire({
+        title: 'Checking Verification Status',
+        html: 'Please wait...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        },
+        showConfirmButton: false
+    });
+
+    // Return a Promise
+    return new Promise((resolve, reject) => {
+        // Slight delay to ensure Swal is rendered
+        setTimeout(() => {
+            // Get email from personal info or form
+            const emailInput = document.getElementById('emailInputField');
+            if (!emailInput || !emailInput.value) {
+                Swal.close();
+                showToast('Email is required to check verification status', 'error');
+                reject(false);
+                return;
+            }
+
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                Swal.close();
+                showToast('CSRF token not found', 'error');
+                reject(false);
+                return;
+            }
+
+            // Make AJAX request
+            $.ajax({
+                url: '/veriff/status',
+                method: 'POST',
+                data: { 
+                    email: emailInput.value,
+                    _token: csrfToken
+                },
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                success: function(data) {
+                    Swal.close();
+                    // Check verification status
+                    if (data.status === 'success' && data.hasSubmittedVerification === true) {
+                        showToast('Verification successfully submitted!', 'success');
+                        resolve(true);
+                    } else if (data.status === 'error' && data.message === "No active verification session found") {
+                        // Specific handling for no active verification session
+                        Swal.fire({
+                            title: 'Verification Required',
+                            text: 'No active verification session found. Please complete the verification process.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                        resolve(false);
+                    } else {
+                        // No verification submitted
+                        Swal.fire({
+                            title: 'Verification Required',
+                            text: 'You have not completed the verification process. Please try the verification again.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                        resolve(false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    Swal.close();
+                    console.error('Error:', xhr.responseJSON);
+                    
+                    // More detailed error handling
+                    if (xhr.status === 419 || xhr.responseJSON?.message === "CSRF token mismatch.") {
+                        showToast('CSRF token expired. Please refresh the page.', 'error');
+                    } else if (xhr.responseJSON?.message === "No active verification session found") {
+                        Swal.fire({
+                            title: 'Verification Required',
+                            text: 'No active verification session found. Please complete the verification process.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                    } else {
+                        showToast('Failed to check verification status. Please try again.', 'error');
+                    }
+                   
+                    reject(false);
+                }
+            });
+        }, 50); // Small delay to ensure Swal is rendered
+    });
+}
+
+
 document.addEventListener("DOMContentLoaded", function () {
     // toggleEmailInput();
     chequeOptionForLandLord();
@@ -1204,6 +1448,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const stepFlow = {
         personalInformation: {
             divId: "personalInformation",
+            // next: "verificationDiv",
             next: "Rent_mortgage_div",
         },
         Rent_mortgage_div: {
@@ -1319,16 +1564,16 @@ document.addEventListener("DOMContentLoaded", function () {
     nextButton.addEventListener("click", function (e) {
         console.log(currentStep);
 
-        // if (!validateStep(currentStep)) {
-        //     e.preventDefault();
-        //     return;
-        // }
-        // console.log(validateStep(currentStep));
+        if (!validateStep(currentStep)) {
+            e.preventDefault();
+            return;
+        }
+        console.log(validateStep(currentStep));
 
-        // if (!validatePassword()) {
-        //     e.preventDefault(); // Prevent form submission if password validation fails
-        //     return;
-        // }
+        if (!validatePassword()) {
+            e.preventDefault(); // Prevent form submission if password validation fails
+            return;
+        }
 
         // Check if email and phone are verified before proceeding
         if (currentStep === "personalInformation") {
@@ -1338,6 +1583,72 @@ document.addEventListener("DOMContentLoaded", function () {
             //     displayVerificationErrors(); // Show specific error messages
             //     return; // Exit the function to stop further execution
             // }
+        }
+
+       // If you need to use it in the address details validation
+        if (currentStep === "address_details_div") {
+            if (!validatePostalCode()) {
+                // Prevent proceeding if postal code is invalid
+                return false;
+            }
+        }
+
+        // In your event listener
+        if (currentStep === "verificationDiv") {
+            e.preventDefault(); // Prevent immediate navigation
+            
+            checkVerificationStatus()
+                .then((isVerified) => {
+                    if (isVerified) {
+                        // Only proceed if verification is successful
+                        updateSummary();
+                        updateAddressSummary();
+                        updateAccountTypeSummary();
+                        const nextStepKey = getNextStepKey(currentStep);
+                        if (nextStepKey) {
+                            navigationStack.push(currentStep);
+                            currentStep = nextStepKey;
+                            navigateToStep(stepFlow[currentStep].divId);
+                        }
+                    } else {
+                        // Verification failed, do nothing (error message already shown)
+                        return false;
+                    }
+                })
+                .catch(() => {
+                    // Catch any errors and prevent navigation
+                    return false;
+                });
+            
+            return false; // Prevent immediate navigation
+        }
+
+        // Check if we're on the co-applicant step and log validation results
+        if (currentStep === "`rentStep5`") {
+            const isApplicantsValid = validateApplicants();
+            const isPercentageValid = validateTotalPercentageAllocation();
+            console.log("Applicants valid:", isApplicantsValid);
+            console.log("Percentage valid:", isPercentageValid);
+            
+            if (!isApplicantsValid || !isPercentageValid) {
+                console.log("Preventing navigation due to validation failure");
+                e.preventDefault();
+                return false;
+            }
+        }
+
+        if (currentStep === "mortgageStep4") {
+            console.log(currentStep, "mortgageStep4");
+            const isMortgageOwnersValid = validateMortgageOwners();
+            const isMortgagePercentageValid = validateTotalMortgagePercentageAllocation();
+            console.log("Mortgage owners valid:", isMortgageOwnersValid);
+            console.log("Mortgage percentage valid:", isMortgagePercentageValid);
+            
+            if (!isMortgageOwnersValid || !isMortgagePercentageValid) {
+                console.log("Preventing navigation due to mortgage validation failure");
+                e.preventDefault();
+                return false;
+            }
         }
 
         updateSummary();
@@ -1397,13 +1708,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Remove the invalid class initially in case it was set previously
         passwordField.classList.remove("is-invalid");
-        confirmPasswordField.classList.remove("is-invalid");
+        // confirmPasswordField.classList.remove("is-invalid");
 
         // Check if passwords match
         if (password !== confirmPassword) {
             showToast("Passwords do not match.", "error");
             passwordField.classList.add("is-invalid"); // Add invalid class to both fields
-            confirmPasswordField.classList.add("is-invalid");
+            // confirmPasswordField.classList.add("is-invalid");
             return false; // Validation failed
         }
 
@@ -1484,17 +1795,18 @@ document.addEventListener("DOMContentLoaded", function () {
         if (div && stepFlow[step].divId === "rentStep5") {
             isValid = validateApplicants() && isValid;
         }
+        
 
         // Additional specific validation for "rentStep4"
-        if (div && stepFlow[step].divId === "mortgageStep4") {
-            isValid = validateApplicants2() && isValid;
+        if (div && stepFlow[step].divId === "MortgageStep4") {
+            isValid = validateMortgageOwners() && isValid;
         }
 
         const fields = div.querySelectorAll(
             "input[required], select[required]"
         );
 
-        console.log(fields);
+        // console.log(fields);
 
         // Loop through each field to validate and display errors if needed
         fields.forEach((field) => {
@@ -1509,14 +1821,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
                     if (!isAnyChecked) {
-                        field.classList.add("is-invalid"); // Add error styling
+                        // field.classList.add("is-invalid"); // Add error styling
                         displayError(field.name, "This field is required.");
                         isValid = false;
                     }
                 } else if (!field.checked) {
                     // Handle individual checkboxes
                     displayError(field.name, "This field is required.");
-                    field.classList.add("is-invalid"); // Add error styling
+                    // field.classList.add("is-invalid"); // Add error styling
                     isValid = false;
                 }
             }
@@ -1537,10 +1849,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 // For other input types, check if value is empty
                 // console.log(field.value.trim(), "field.value.trim()");
                 displayError(field.name, "This field is required.");
-                field.classList.add("is-invalid"); // Add error styling
+                // field.classList.add("is-invalid"); // Add error styling
                 isValid = false;
             } else {
-                field.classList.remove("is-invalid"); // Add error styling
+                // field.classList.remove("is-invalid"); // Add error styling
                 // console.log(field.value);
             }
 
@@ -1617,11 +1929,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 const errorSpan = form.querySelector(
                     `[data-error-id="${errorIds[fieldKey]}"]`
                 );
-                console.log(
-                    `Validating field: ${fieldKey}`,
-                    "Error span:",
-                    errorSpan
-                );
+                // console.log(
+                //     `Validating field: ${fieldKey}`,
+                //     "Error span:",
+                //     errorSpan
+                // );
 
                 // Check for validation and display errors if necessary
                 if (!field.value.trim()) {
@@ -1647,102 +1959,415 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Validation result for applicants:", isValid);
         return isValid;
     }
+
+    function validateMortgageOwners() {
+        let isValid = true;
+        const ownerForms = mortgageOwnersContainer.querySelectorAll(".addNewApplicant2");
+    
+        ownerForms.forEach((form, index) => {
+            console.log(`Validating mortgage owner form #${index + 1}`);
+    
+            const fields = {
+                firstName: form.querySelector("input[name='mortgagecoOwnerfirstName[]']"),
+                lastName: form.querySelector("input[name='mortgagecoOwnerlastName[]']"),
+                email: form.querySelector("input[name='mortgagecoOwneremail[]']"),
+                amount: form.querySelector("input[name='mortgagecoOwneramount[]']"),
+            };
+    
+            // Map the field keys to the corresponding error ID names
+            const errorIds = {
+                firstName: "mortgagecoOwnerfirstNameError",
+                lastName: "mortgagecoOwnerlastNameError",
+                email: "mortgagecoOwneremailError",
+                amount: "mortgagecoOwneramountError",
+            };
+    
+            Object.keys(fields).forEach((fieldKey) => {
+                const field = fields[fieldKey];
+    
+                if (!field) return; // Skip if field is not found
+    
+                // Select the error span using the mapped error ID
+                const errorSpan = form.querySelector(`[data-error-id="${errorIds[fieldKey]}"]`);
+    
+                // Check for validation and display errors if necessary
+                if (!field.value.trim()) {
+                    if (errorSpan) {
+                        errorSpan.textContent = "This field is required.";
+                        errorSpan.style.display = "block";
+                    }
+                    isValid = false;
+                } else if (fieldKey === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value.trim())) {
+                    if (errorSpan) {
+                        errorSpan.textContent = "Please enter a valid email.";
+                        errorSpan.style.display = "block";
+                    }
+                    isValid = false;
+                } else if (errorSpan) {
+                    errorSpan.style.display = "none";
+                }
+    
+                // Clear error message on input
+                field.addEventListener("input", () => {
+                    if (errorSpan) {
+                        errorSpan.textContent = "";
+                        errorSpan.style.display = "none";
+                    }
+                });
+            });
+        });
+    
+        // Also validate primary owner percentage
+        // const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+        // if (primaryInput) {
+        //     const errorSpan = document.querySelector('[data-error-id="coApplicanMortgagePrimaryAmountError"]');
+            
+        //     if (!primaryInput.value.trim()) {
+        //         if (errorSpan) {
+        //             errorSpan.textContent = "Primary percentage is required.";
+        //             errorSpan.style.display = "block";
+        //         }
+        //         isValid = false;
+        //     } else if (isNaN(parseFloat(primaryInput.value)) || parseFloat(primaryInput.value) < 1 || parseFloat(primaryInput.value) > 100) {
+        //         if (errorSpan) {
+        //             errorSpan.textContent = "Percentage must be between 1 and 100.";
+        //             errorSpan.style.display = "block";
+        //         }
+        //         isValid = false;
+        //     }
+            
+        //     // Clear error message on input
+        //     primaryInput.addEventListener("input", () => {
+        //         if (errorSpan) {
+        //             errorSpan.textContent = "";
+        //             errorSpan.style.display = "none";
+        //         }
+        //     });
+        // }
+    
+        console.log("Validation result for mortgage owners:", isValid);
+        return isValid;
+    }
 });
 
 
-// Improve variable naming and add validation for total percentage
-const applicantsContainer2 = document.getElementById("applicantsContainer2");
-const addApplicantBtn2 = document.getElementById("addApplicantBtn2");
-let applicantCount2 = 1; // Tracks number of co-owners
+// // Improve variable naming and add validation for total percentage
+// const applicantsContainer2 = document.getElementById("applicantsContainer2");
+// const addApplicantBtn2 = document.getElementById("addApplicantBtn2");
+// let applicantCount2 = 1; // Tracks number of co-owners
 
-// Add validation for total percentage
-function validateTotalPercentage() {
-    const primaryPercentage = parseFloat(document.getElementById('coApplicanMortgagePrimaryAmount').value) || 0;
-    let coOwnerTotal = 0;
+// // Add validation for total percentage
+// function validateTotalPercentage() {
+//     const primaryPercentage = parseFloat(document.getElementById('coApplicanMortgagePrimaryAmount').value) || 0;
+//     let coOwnerTotal = 0;
 
-    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
-        // coOwnerTotal += parseFloat(input.value) || 0;
-    });
+//     document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+//         // coOwnerTotal += parseFloat(input.value) || 0;
+//     });
 
-    const total = primaryPercentage + coOwnerTotal;
-    return total <= 100;
-}
+//     const total = primaryPercentage + coOwnerTotal;
+//     return total <= 100;
+// }
 
-function updatePercentageSummary2() {
-    const primaryPercentage = parseFloat(document.getElementById('coApplicanMortgagePrimaryAmount').value) || 0;
-    let coOwnersTotal = 0;
+// function updatePercentageSummary2() {
+//     const primaryPercentage = parseFloat(document.getElementById('coApplicanMortgagePrimaryAmount').value) || 0;
+//     let coOwnersTotal = 0;
 
-    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
-        // coOwnersTotal += parseFloat(input.value) || 0;
-    });
+//     document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+//         // coOwnersTotal += parseFloat(input.value) || 0;
+//     });
 
-    const totalPercentage = primaryPercentage + coOwnersTotal;
-    const remainingPercentage = 100 - totalPercentage;
+//     const totalPercentage = primaryPercentage + coOwnersTotal;
+//     const remainingPercentage = 100 - totalPercentage;
 
-    // Update summary display
-    document.getElementById('primaryOwnerPercentage').textContent = primaryPercentage.toFixed(2);
-    document.getElementById('coOwnersPercentage').textContent = coOwnersTotal.toFixed(2);
-    document.getElementById('totalPercentage').textContent = totalPercentage.toFixed(2);
-    document.getElementById('remainingPercentage').textContent = remainingPercentage.toFixed(2);
+//     // Update summary display
+//     document.getElementById('primaryOwnerPercentage').textContent = primaryPercentage.toFixed(2);
+//     document.getElementById('coOwnersPercentage').textContent = coOwnersTotal.toFixed(2);
+//     document.getElementById('totalPercentage').textContent = totalPercentage.toFixed(2);
+//     document.getElementById('remainingPercentage').textContent = remainingPercentage.toFixed(2);
 
-    // Add visual feedback
-    const totalElement = document.getElementById('totalPercentage');
-    const remainingElement = document.getElementById('remainingPercentage');
+//     // Add visual feedback
+//     const totalElement = document.getElementById('totalPercentage');
+//     const remainingElement = document.getElementById('remainingPercentage');
 
-    if (totalPercentage > 100) {
-        totalElement.classList.add('text-danger');
-        remainingElement.classList.add('text-danger');
-    } else {
-        totalElement.classList.remove('text-danger');
-        remainingElement.classList.remove('text-danger');
-    }
-}
+//     if (totalPercentage > 100) {
+//         totalElement.classList.add('text-danger');
+//         remainingElement.classList.add('text-danger');
+//     } else {
+//         totalElement.classList.remove('text-danger');
+//         remainingElement.classList.remove('text-danger');
+//     }
+// }
 
-function updatePercentageSummary() {
-    try {
-        const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
-        const primaryPercentage = parseFloat(primaryInput?.value) || 0;
-        let coOwnersTotal = 0;
+// function updatePercentageSummary() {
+//     try {
+//         const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+//         const primaryPercentage = parseFloat(primaryInput?.value) || 0;
+//         let coOwnersTotal = 0;
 
-        document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
-            coOwnersTotal += parseFloat(input.value) || 0;
-        });
+//         document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+//             coOwnersTotal += parseFloat(input.value) || 0;
+//         });
 
-        const totalPercentage = primaryPercentage + coOwnersTotal;
-        const remainingPercentage = 100 - totalPercentage;
+//         const totalPercentage = primaryPercentage + coOwnersTotal;
+//         const remainingPercentage = 100 - totalPercentage;
 
-        // Update summary displays
-        const elements = {
-            primaryOwnerPercentage: primaryPercentage.toFixed(2),
-            coOwnersPercentage: coOwnersTotal.toFixed(2),
-            totalPercentage: totalPercentage.toFixed(2),
-            remainingPercentage: Math.max(0, remainingPercentage).toFixed(2)
-        };
+//         // Update summary displays
+//         const elements = {
+//             primaryOwnerPercentage: primaryPercentage.toFixed(2),
+//             coOwnersPercentage: coOwnersTotal.toFixed(2),
+//             totalPercentage: totalPercentage.toFixed(2),
+//             remainingPercentage: Math.max(0, remainingPercentage).toFixed(2)
+//         };
 
-        Object.entries(elements).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-                // Add visual feedback for total percentage
-                if (id === 'totalPercentage' || id === 'remainingPercentage') {
-                    element.classList.toggle('text-danger', totalPercentage > 100);
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error updating percentage summary:', error);
-    }
-}
+//         Object.entries(elements).forEach(([id, value]) => {
+//             const element = document.getElementById(id);
+//             if (element) {
+//                 element.textContent = value;
+//                 // Add visual feedback for total percentage
+//                 if (id === 'totalPercentage' || id === 'remainingPercentage') {
+//                     element.classList.toggle('text-danger', totalPercentage > 100);
+//                 }
+//             }
+//         });
+//     } catch (error) {
+//         console.error('Error updating percentage summary:', error);
+//     }
+// }
 
-// Modify your existing validatePercentageInput function to include this update
-function validatePercentageInput(input) {
+// // Modify your existing validatePercentageInput function to include this update
+// function validatePercentageInput(input) {
+//     if (!input) {
+//         console.error('Input element is undefined');
+//         return false;
+//     }
+
+//     const rawValue = input.value;
+//     // Don't convert to float immediately to handle whole numbers correctly
+//     const errorSpan = input.closest('.col-md-3')?.querySelector('.error-message');
+//     let valid = true;
+
+//     if (errorSpan) {
+//         errorSpan.textContent = '';
+//     }
+//     input.classList.remove('is-invalid');
+
+//     // If empty input
+//     if (!rawValue) {
+//         if (errorSpan) {
+//             errorSpan.textContent = 'Percentage is required';
+//         }
+//         input.classList.add('is-invalid');
+//         return false;
+//     }
+
+//     // Convert to number for validation
+//     const value = parseFloat(rawValue);
+
+//     if (isNaN(value)) {
+//         if (errorSpan) {
+//             errorSpan.textContent = 'Please enter a valid percentage';
+//         }
+//         input.classList.add('is-invalid');
+//         return false;
+//     }
+
+//     if (value < 1 || value > 100) {
+//         if (errorSpan) {
+//             errorSpan.textContent = 'Percentage must be between 1 and 100';
+//         }
+//         input.classList.add('is-invalid');
+//         input.value = '';
+//         return false;
+//     }
+
+//     let totalPercentage = 0;
+
+//     const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+//     if (primaryInput) {
+//         totalPercentage += parseFloat(primaryInput.value) || 0;
+//     }
+
+//     document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(coOwnerInput => {
+//         if (coOwnerInput !== input) {
+//             totalPercentage += parseFloat(coOwnerInput.value) || 0;
+//         }
+//     });
+
+//     totalPercentage += value;
+
+//     if (totalPercentage > 100) {
+//         if (errorSpan) {
+//             errorSpan.textContent = 'Total percentage cannot exceed 100%';
+//         }
+//         input.classList.add('is-invalid');
+//         input.value = '';
+//         return false;
+//     }
+
+//     // Only format to 2 decimal places if the input contains a decimal point
+//     if (rawValue.includes('.')) {
+//         input.value = value.toFixed(2);
+//     } else {
+//         input.value = Math.floor(value); // Keep whole numbers as is
+//     }
+
+//     updatePercentageSummary();
+//     return true;
+// }
+
+// // Add this input handler to prevent non-numeric input
+// document.addEventListener('DOMContentLoaded', function () {
+//     const inputs = document.querySelectorAll('input[type="number"]');
+//     inputs.forEach(input => {
+//         input.addEventListener('input', function (e) {
+//             // Allow numbers and single decimal point
+//             let value = this.value.replace(/[^\d.]/g, '');
+
+//             // Ensure only one decimal point
+//             const decimalCount = (value.match(/\./g) || []).length;
+//             if (decimalCount > 1) {
+//                 value = value.slice(0, value.lastIndexOf('.'));
+//             }
+
+//             this.value = value;
+//         });
+//     });
+// });
+
+// // Add event listeners
+// document.addEventListener('DOMContentLoaded', function() {
+//     // Event listener for primary amount
+//     const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+//     if (primaryInput) {
+//         primaryInput.addEventListener('input', function() {
+//             this.value = this.value.replace(/[^\d.]/g, '');
+//             validatePercentageInput(this);
+//         });
+//     }
+
+//     // Event listeners for co-owner amounts
+//     document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+//         input.addEventListener('input', function() {
+//             this.value = this.value.replace(/[^\d.]/g, '');
+//             validatePercentageInput(this);
+//         });
+//     });
+// });
+
+// // Add event listeners for real-time updates
+// document.getElementById('coApplicanMortgagePrimaryAmount').addEventListener('input', function() {
+//     validatePercentageInput(this);
+// });
+
+// document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+//     input.addEventListener('input', function() {
+//         validatePercentageInput(this);
+//     });
+// });
+
+// // Call initially to set up summary
+// updatePercentageSummary();
+
+// function toggleAddButton2() {
+//     addApplicantBtn2.disabled = applicantCount2 >= 3;
+// }
+
+// // Add event listener with improved error handling
+// addApplicantBtn2.addEventListener("click", () => {
+//     try {
+//         if (applicantCount2 < 3) {
+//             applicantCount2++;
+//             const newApplicantDiv2 = createNewApplicantDiv();
+//             applicantsContainer2.appendChild(newApplicantDiv2);
+//             setupDeleteHandler(newApplicantDiv2);
+//             toggleAddButton2();
+//         }
+//     } catch (error) {
+//         console.error('Error adding applicant:', error);
+//     }
+// });
+
+// // Separate function for creating new applicant div
+// function createNewApplicantDiv() {
+//     const newApplicantDiv2 = document.createElement("div");
+//     newApplicantDiv2.classList.add("rounded", "mb-2", "border", "p-4", "addNewApplicant2");
+//     newApplicantDiv2.id = `addNewApplicant2${applicantCount2 + 110}`;
+
+//     // Your existing HTML template
+//     newApplicantDiv2.innerHTML = `<div class="form-group row mb-3">
+//                 <div class="col-md-3">
+//                     <label class="form-label">First Name:</label>
+//                     <input type="text" name="mortgagecoOwnerfirstName[]" class="form-control mb-2 mb-md-0" placeholder="Enter first name" required>
+//                 </div>
+//                 <div class="col-md-3">
+//                     <label class="form-label">Last Name:</label>
+//                     <input type="text" name="mortgagecoOwnerlastName[]" class="form-control mb-2 mb-md-0" placeholder="Enter last name" required>
+//                 </div>
+//                 <div class="col-md-3">
+//                     <label class="form-label">Email:</label>
+//                     <input type="email" name="mortgagecoOwneremail[]" class="form-control mb-2 mb-md-0" placeholder="Enter email address" required>
+//                 </div>
+//                 <div class="col-md-3">
+//                     <label class="form-label">Percentage Amount:</label>
+//                     <input type="number" 
+//                         name="mortgagecoOwneramount[]"  
+//                         onblur="validatePercentageInput(this)"
+//                         class="form-control mb-2 mb-md-0"
+//                         placeholder="Enter percentage (1-100)" 
+//                         min="1" 
+//                         max="100" 
+//                         required>
+//                     <span class="error-message"></span>
+//                 </div>
+//                 <div class="col-md-2">
+//                     <a href="javascript:;" class="btn btn-sm btn-flex flex-center btn-light-danger mt-3 mt-md-9 deleteApplicantBtn2">
+//                         Delete
+//                     </a>
+//                 </div>
+//             </div>`; // Keep your existing template
+
+//     return newApplicantDiv2;
+// }
+
+// // Separate function for delete handler setup
+// function setupDeleteHandler(applicantDiv) {
+//     const deleteBtn = applicantDiv.querySelector(".deleteApplicantBtn2");
+//     if (deleteBtn) {
+//         deleteBtn.addEventListener("click", () => {
+//             applicantDiv.remove();
+//             applicantCount2--;
+//             toggleAddButton2();
+//         });
+//     }
+// }
+
+// // Initialize delete buttons for existing entries
+// document.querySelectorAll(".deleteApplicantBtn2").forEach((deleteBtn) => {
+//     deleteBtn.addEventListener("click", (event) => {
+//         event.target.closest(".addNewApplicant2").remove();
+//         applicantCount2--;
+//         toggleAddButton2();
+//     });
+// });
+
+// // Initial button state
+// toggleAddButton2();
+
+
+//Mortgage Co-Owner script
+// Mortgage Co-owner scripts
+const mortgageOwnersContainer = document.getElementById("applicantsContainer2");
+const addMortgageOwnerBtn = document.getElementById("addApplicantBtn2");
+let mortgageOwnerCount = 1;
+
+function validateMortgagePercentageInput(input) {
     if (!input) {
         console.error('Input element is undefined');
         return false;
     }
 
     const rawValue = input.value;
-    // Don't convert to float immediately to handle whole numbers correctly
     const errorSpan = input.closest('.col-md-3')?.querySelector('.error-message');
     let valid = true;
 
@@ -1763,6 +2388,7 @@ function validatePercentageInput(input) {
     // Convert to number for validation
     const value = parseFloat(rawValue);
 
+    // Check if it's a valid number
     if (isNaN(value)) {
         if (errorSpan) {
             errorSpan.textContent = 'Please enter a valid percentage';
@@ -1771,264 +2397,291 @@ function validatePercentageInput(input) {
         return false;
     }
 
-    if (value < 1 || value > 100) {
+    // Enforce minimum value
+    if (value < 1) {
         if (errorSpan) {
-            errorSpan.textContent = 'Percentage must be between 1 and 100';
+            errorSpan.textContent = 'Percentage must be at least 1%';
         }
         input.classList.add('is-invalid');
-        input.value = '';
+        return false;
+    }
+    
+    // Enforce maximum value for individual field
+    if (value > 100) {
+        if (errorSpan) {
+            errorSpan.textContent = 'Percentage cannot exceed 100%';
+        }
+        input.classList.add('is-invalid');
+        // Don't clear the field, just limit the value
+        input.value = '100';
         return false;
     }
 
-    let totalPercentage = 0;
-
-    const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
-    if (primaryInput) {
-        totalPercentage += parseFloat(primaryInput.value) || 0;
-    }
-
-    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(coOwnerInput => {
-        if (coOwnerInput !== input) {
-            totalPercentage += parseFloat(coOwnerInput.value) || 0;
-        }
-    });
-
-    totalPercentage += value;
-
-    if (totalPercentage > 100) {
+    // Check if total exceeds 100%
+    if (!validateTotalMortgagePercentage()) {
         if (errorSpan) {
             errorSpan.textContent = 'Total percentage cannot exceed 100%';
         }
         input.classList.add('is-invalid');
-        input.value = '';
+        // Don't clear the field - keep the value the user entered
         return false;
     }
 
-    // Only format to 2 decimal places if the input contains a decimal point
+    // Format the value with proper decimals
     if (rawValue.includes('.')) {
         input.value = value.toFixed(2);
     } else {
-        input.value = Math.floor(value); // Keep whole numbers as is
+        input.value = Math.floor(value);
     }
 
-    updatePercentageSummary();
+    // Update summary display
+    updateMortgagePercentageSummary();
+    validateTotalMortgagePercentageAllocation();
     return true;
 }
 
-// Add this input handler to prevent non-numeric input
-document.addEventListener('DOMContentLoaded', function () {
-    const inputs = document.querySelectorAll('input[type="number"]');
-    inputs.forEach(input => {
-        input.addEventListener('input', function (e) {
-            // Allow numbers and single decimal point
-            let value = this.value.replace(/[^\d.]/g, '');
-
-            // Ensure only one decimal point
-            const decimalCount = (value.match(/\./g) || []).length;
-            if (decimalCount > 1) {
-                value = value.slice(0, value.lastIndexOf('.'));
-            }
-
-            this.value = value;
-        });
+function validateTotalMortgagePercentageAllocation() {
+    const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+    let totalPercentage = parseFloat(primaryInput?.value) || 0;
+    
+    // Add all co-owner percentages
+    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+        totalPercentage += parseFloat(input.value) || 0;
     });
-});
-
-// Add event listeners
-// document.addEventListener('DOMContentLoaded', function() {
-//     // Event listener for primary amount
-//     const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
-//     if (primaryInput) {
-//         primaryInput.addEventListener('input', function() {
-//             this.value = this.value.replace(/[^\d.]/g, '');
-//             validatePercentageInput(this);
-//         });
-//     }
-
-//     // Event listeners for co-owner amounts
-//     document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
-//         input.addEventListener('input', function() {
-//             this.value = this.value.replace(/[^\d.]/g, '');
-//             validatePercentageInput(this);
-//         });
-//     });
-// });
-
-// Add event listeners for real-time updates
-// document.getElementById('coApplicanMortgagePrimaryAmount').addEventListener('input', function() {
-//     validatePercentageInput(this);
-// });
-
-// document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
-//     input.addEventListener('input', function() {
-//         validatePercentageInput(this);
-//     });
-// });
-
-// Call initially to set up summary
-updatePercentageSummary();
-
-function toggleAddButton2() {
-    addApplicantBtn2.disabled = applicantCount2 >= 3;
+    
+    // Get the summary container
+    const summaryContainer = document.querySelector('#MortgageStep4 .percentage-summary');
+    
+    // Check if message div already exists
+    let messageDiv = document.getElementById('mortgagePercentageSummaryMessage');
+    
+    if (!messageDiv && summaryContainer) {
+        // Create the message div with your specific styling
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'mortgagePercentageSummaryMessage';
+        messageDiv.style.fontWeight = '500';
+        messageDiv.style.letterSpacing = '1px';
+        messageDiv.style.marginTop = '10px';
+        messageDiv.style.padding = '8px';
+        messageDiv.style.borderRadius = '4px';
+        summaryContainer.appendChild(messageDiv);
+    }
+    
+    if (messageDiv) {
+        // Check if total exceeds 100%
+        if (totalPercentage > 100) {
+            // Error styling
+            messageDiv.className = 'text-danger';
+            messageDiv.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+            messageDiv.textContent = `Total percentage (${totalPercentage.toFixed(2)}%) exceeds 100%. Please adjust the values.`;
+            
+            // Highlight the total in red
+            const totalElement = document.getElementById('totalPercentage');
+            if (totalElement) {
+                totalElement.classList.add('text-danger', 'fw-bold');
+            }
+            return false;
+        } else if (totalPercentage === 100) {
+            // Perfect 100% - success styling
+            messageDiv.className = 'text-success';
+            messageDiv.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+            messageDiv.textContent = `Perfect! Total allocation is exactly 100%.`;
+            
+            // Remove highlight
+            const totalElement = document.getElementById('totalPercentage');
+            if (totalElement) {
+                totalElement.classList.remove('text-danger', 'fw-bold');
+            }
+            return true;
+        } else {
+            // Under 100% - info styling
+            messageDiv.className = 'text-info';
+            messageDiv.style.backgroundColor = 'rgba(23, 162, 184, 0.1)';
+            messageDiv.textContent = `Current allocation: ${totalPercentage.toFixed(2)}% (${(100-totalPercentage).toFixed(2)}% remaining)`;
+            
+            // Remove highlight
+            const totalElement = document.getElementById('totalPercentage');
+            if (totalElement) {
+                totalElement.classList.remove('text-danger', 'fw-bold');
+            }
+            return true;
+        }
+    }
+    
+    return totalPercentage <= 100;
 }
 
-// Add event listener with improved error handling
-addApplicantBtn2.addEventListener("click", () => {
-    try {
-        if (applicantCount2 < 3) {
-            applicantCount2++;
-            const newApplicantDiv2 = createNewApplicantDiv();
-            applicantsContainer2.appendChild(newApplicantDiv2);
-            setupDeleteHandler(newApplicantDiv2);
-            toggleAddButton2();
-        }
-    } catch (error) {
-        console.error('Error adding applicant:', error);
+function initMortgagePercentageInputListeners() {
+    // Primary owner percentage input
+    const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+    if (primaryInput) {
+        primaryInput.addEventListener('input', function() {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^\d.]/g, '');
+            // Update validation in real-time
+            validateTotalMortgagePercentageAllocation();
+        });
     }
-});
+    
+    // Add listeners to existing co-owner inputs
+    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+        input.addEventListener('input', function() {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^\d.]/g, '');
+            // Update validation in real-time
+            validateTotalMortgagePercentageAllocation();
+        });
+    });
+}
 
-// Separate function for creating new applicant div
-function createNewApplicantDiv() {
-    const newApplicantDiv2 = document.createElement("div");
-    newApplicantDiv2.classList.add("rounded", "mb-2", "border", "p-4", "addNewApplicant2");
-    newApplicantDiv2.id = `addNewApplicant2${applicantCount2 + 110}`;
+// Call this function when document is ready
+document.addEventListener('DOMContentLoaded', initMortgagePercentageInputListeners);
 
-    // Your existing HTML template
-    newApplicantDiv2.innerHTML = `<div class="form-group row mb-3">
+function validateTotalMortgagePercentage() {
+    const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+    let totalPercentage = parseFloat(primaryInput?.value) || 0;
+
+    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+        totalPercentage += parseFloat(input.value) || 0;
+    });
+
+    return totalPercentage <= 100;
+}
+
+function updateMortgagePercentageSummary() {
+    try {
+        const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+        const primaryPercentage = parseFloat(primaryInput?.value) || 0;
+        let coOwnersTotal = 0;
+
+        document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+            coOwnersTotal += parseFloat(input.value) || 0;
+        });
+
+        const totalPercentage = primaryPercentage + coOwnersTotal;
+        const remainingPercentage = 100 - totalPercentage;
+
+        const elements = {
+            primaryOwnerPercentage: primaryPercentage.toFixed(2),
+            coOwnersPercentage: coOwnersTotal.toFixed(2),
+            totalPercentage: totalPercentage.toFixed(2),
+            remainingPercentage: Math.max(0, remainingPercentage).toFixed(2)
+        };
+
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+                element.classList.toggle('text-danger', totalPercentage > 100);
+            }
+        });
+    } catch (error) {
+        console.error('Error updating mortgage percentage summary:', error);
+    }
+}
+
+function toggleMortgageAddButton() {
+    addMortgageOwnerBtn.disabled = mortgageOwnerCount >= 3;
+}
+
+addMortgageOwnerBtn.addEventListener("click", () => {
+    if (mortgageOwnerCount < 3) {
+        mortgageOwnerCount++;
+        const newOwnerDiv = document.createElement("div");
+        newOwnerDiv.classList.add(
+            "rounded",
+            "mb-2",
+            "border",
+            "p-4",
+            "addNewApplicant2"
+        );
+        newOwnerDiv.id = `addNewMortgageOwner${mortgageOwnerCount + 110}`;
+
+        newOwnerDiv.innerHTML = `
+            <div class="form-group row mb-3">
                 <div class="col-md-3">
-                    <label class="form-label">First Name:</label>
+                    <label class="form-label fw-bold text-gray-900">First Name:</label>
                     <input type="text" name="mortgagecoOwnerfirstName[]" class="form-control mb-2 mb-md-0" placeholder="Enter first name" required>
+                    <span class="error-message" data-error-id="mortgagecoOwnerfirstNameError"></span>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Last Name:</label>
+                    <label class="form-label fw-bold text-gray-900">Last Name:</label>
                     <input type="text" name="mortgagecoOwnerlastName[]" class="form-control mb-2 mb-md-0" placeholder="Enter last name" required>
+                    <span class="error-message" data-error-id="mortgagecoOwnerlastNameError"></span>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Email:</label>
+                    <label class="form-label fw-bold text-gray-900">Email:</label>
                     <input type="email" name="mortgagecoOwneremail[]" class="form-control mb-2 mb-md-0" placeholder="Enter email address" required>
+                    <span class="error-message" data-error-id="mortgagecoOwneremailError"></span>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Percentage Amount:</label>
+                    <label class="form-label fw-bold text-gray-900">Percentage Amount:</label>
                     <input type="number" 
-                        name="mortgagecoOwneramount[]"  
-                        onblur="validatePercentageInput(this)"
-                        class="form-control mb-2 mb-md-0"
-                        placeholder="Enter percentage (1-100)" 
-                        min="1" 
-                        max="100" 
-                        required>
-                    <span class="error-message"></span>
+                           name="mortgagecoOwneramount[]" 
+                           onblur="validateMortgagePercentageInput(this)" 
+                           class="form-control mb-2 mb-md-0" 
+                           placeholder="Enter percentage (1-100)"
+                           min="1"
+                           max="100"
+                           required>
+                    <span class="error-message" data-error-id="mortgagecoOwneramountError"></span>
                 </div>
                 <div class="col-md-2">
-                    <a href="javascript:;" class="btn btn-sm btn-flex flex-center btn-light-danger mt-3 mt-md-9 deleteApplicantBtn2">
+                    <a href="javascript:;" class="btn btn-sm btn-flex flex-center btn-light-danger mt-3 mt-md-9 deleteMortgageOwnerBtn">
                         Delete
                     </a>
                 </div>
-            </div>`; // Keep your existing template
+            </div>
+        `;
 
-    return newApplicantDiv2;
-}
+        mortgageOwnersContainer.appendChild(newOwnerDiv);
 
-// Separate function for delete handler setup
-function setupDeleteHandler(applicantDiv) {
-    const deleteBtn = applicantDiv.querySelector(".deleteApplicantBtn2");
-    if (deleteBtn) {
-        deleteBtn.addEventListener("click", () => {
-            applicantDiv.remove();
-            applicantCount2--;
-            toggleAddButton2();
-        });
+        newOwnerDiv
+            .querySelector(".deleteMortgageOwnerBtn")
+            .addEventListener("click", () => {
+                newOwnerDiv.remove();
+                mortgageOwnerCount--;
+                toggleMortgageAddButton();
+                updateMortgagePercentageSummary();
+            });
+
+        toggleMortgageAddButton();
     }
-}
+});
 
-// Initialize delete buttons for existing entries
-document.querySelectorAll(".deleteApplicantBtn2").forEach((deleteBtn) => {
+document.querySelectorAll(".deleteMortgageOwnerBtn").forEach((deleteBtn) => {
     deleteBtn.addEventListener("click", (event) => {
         event.target.closest(".addNewApplicant2").remove();
-        applicantCount2--;
-        toggleAddButton2();
+        mortgageOwnerCount--;
+        toggleMortgageAddButton();
+        updateMortgagePercentageSummary();
     });
 });
 
-// Initial button state
-toggleAddButton2();
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', function () {
+    const primaryInput = document.getElementById('coApplicanMortgagePrimaryAmount');
+    if (primaryInput) {
+        primaryInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^\d.]/g, '');
+            validateMortgagePercentageInput(this);
+            validateTotalMortgagePercentageAllocation();
+        });
+    }
+
+    document.querySelectorAll('input[name="mortgagecoOwneramount[]"]').forEach(input => {
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/[^\d.]/g, '');
+            validateMortgagePercentageInput(this);
+            validateTotalMortgagePercentageAllocation();
+        });
+    });
+});
+
+toggleMortgageAddButton(); // Initial check for button status
 
 
-// const applicantsContainer = document.getElementById("applicantsContainer");
-// const addApplicantBtn = document.getElementById("addApplicantBtn");
-// let applicantCount = 1;
-
-// function toggleAddButton() {
-//     addApplicantBtn.disabled = applicantCount >= 3;
-// }
-
-// addApplicantBtn.addEventListener("click", () => {
-//     if (applicantCount < 3) {
-//         applicantCount++;
-//         const newApplicantDiv = document.createElement("div");
-//         newApplicantDiv.classList.add(
-//             "rounded",
-//             "mb-2",
-//             "border",
-//             "p-4",
-//             "addNewApplicant"
-//         );
-//         newApplicantDiv.id = `addNewApplicant${applicantCount + 110}`;
-
-//         newApplicantDiv.innerHTML = `
-//             <div class="form-group row mb-3">
-//                 <div class="col-md-3">
-//                     <label class="form-label">First Name:</label>
-//                     <input type="text" name="coApplicantfirstName[]" class="form-control mb-2 mb-md-0" placeholder="Enter first name" required>
-//                     <span class="error-message" data-error-id="coApplicantfirstNameError"></span>
-//                 </div>
-//                 <div class="col-md-3">
-//                     <label class="form-label">Last Name:</label>
-//                     <input type="text" name="coApplicantlastName[]" class="form-control mb-2 mb-md-0" placeholder="Enter last name" required>
-//                     <span class="error-message" data-error-id="coApplicantlastNameError"></span>
-//                 </div>
-//                 <div class="col-md-3">
-//                     <label class="form-label">Email:</label>
-//                     <input type="email" name="coApplicantemail[]" class="form-control mb-2 mb-md-0" placeholder="Enter email address" required>
-//                     <span class="error-message" data-error-id="coApplicantemailError"></span>
-//                 </div>
-//                 <div class="col-md-3">
-//                     <label class="form-label">Rent Amount:</label>
-//                     <input type="text" name="coApplicantamount[]" oninput="validateNumericInput(this)" class="form-control mb-2 mb-md-0" min="100" max="20000" placeholder="1,000.00" required>
-//                     <span class="error-message" data-error-id="coApplicantamountError"></span>
-//                 </div>
-//                 <div class="col-md-2">
-//                     <a href="javascript:;" class="btn btn-sm btn-flex flex-center btn-light-danger mt-3 mt-md-9 deleteApplicantBtn">
-//                         Delete
-//                     </a>
-//                 </div>
-//             </div>
-//         `;
-
-//         applicantsContainer.appendChild(newApplicantDiv);
-
-//         newApplicantDiv
-//             .querySelector(".deleteApplicantBtn")
-//             .addEventListener("click", () => {
-//                 newApplicantDiv.remove();
-//                 applicantCount--;
-//                 toggleAddButton();
-//             });
-
-//         toggleAddButton();
-//     }
-// });
-
-// document.querySelectorAll(".deleteApplicantBtn").forEach((deleteBtn) => {
-//     deleteBtn.addEventListener("click", (event) => {
-//         event.target.closest(".addNewApplicant").remove();
-//         applicantCount--;
-//         toggleAddButton();
-//     });
-// });
-
-// toggleAddButton(); // Initial check for button status
-
+//Rent Co-applicant scripts
 const applicantsContainer = document.getElementById("applicantsContainer");
 const addApplicantBtn = document.getElementById("addApplicantBtn");
 let applicantCount = 1;
@@ -2048,6 +2701,7 @@ function validateApplicantPercentageInput(input) {
     }
     input.classList.remove('is-invalid');
 
+    // If empty input
     if (!rawValue) {
         if (errorSpan) {
             errorSpan.textContent = 'Percentage is required';
@@ -2056,8 +2710,10 @@ function validateApplicantPercentageInput(input) {
         return false;
     }
 
+    // Convert to number for validation
     const value = parseFloat(rawValue);
 
+    // Check if it's a valid number
     if (isNaN(value)) {
         if (errorSpan) {
             errorSpan.textContent = 'Please enter a valid percentage';
@@ -2066,33 +2722,145 @@ function validateApplicantPercentageInput(input) {
         return false;
     }
 
-    if (value < 1 || value > 100) {
+    // Enforce minimum value
+    if (value < 1) {
         if (errorSpan) {
-            errorSpan.textContent = 'Percentage must be between 1 and 100';
+            errorSpan.textContent = 'Percentage must be at least 1%';
         }
         input.classList.add('is-invalid');
-        input.value = '';
+        return false;
+    }
+    
+    // Enforce maximum value for individual field
+    if (value > 100) {
+        if (errorSpan) {
+            errorSpan.textContent = 'Percentage cannot exceed 100%';
+        }
+        input.classList.add('is-invalid');
+        // Don't clear the field, just limit the value
+        input.value = '100';
         return false;
     }
 
+    // Check if total exceeds 100%
     if (!validateTotalApplicantPercentage()) {
         if (errorSpan) {
             errorSpan.textContent = 'Total percentage cannot exceed 100%';
         }
         input.classList.add('is-invalid');
-        input.value = '';
+        // Don't clear the field - keep the value the user entered
         return false;
     }
 
+    // Format the value with proper decimals
     if (rawValue.includes('.')) {
         input.value = value.toFixed(2);
     } else {
         input.value = Math.floor(value);
     }
 
+    // Update summary display
     updateApplicantPercentageSummary();
+    validateTotalPercentageAllocation();
     return true;
 }
+
+function validateTotalPercentageAllocation() {
+    const primaryInput = document.getElementById('coApplicanRentPrimaryAmount');
+    let totalPercentage = parseFloat(primaryInput?.value) || 0;
+    
+    // Add all co-applicant percentages
+    document.querySelectorAll('input[name="coApplicantamount[]"]').forEach(input => {
+        totalPercentage += parseFloat(input.value) || 0;
+    });
+    
+    // Get the summary container
+    const summaryContainer = document.querySelector('.percentage-summary');
+    
+    // Check if message div already exists
+    let messageDiv = document.getElementById('percentageSummaryMessage');
+    
+    if (!messageDiv && summaryContainer) {
+        // Create the message div with your specific styling
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'percentageSummaryMessage';
+        messageDiv.style.fontWeight = '500';
+        messageDiv.style.letterSpacing = '1px';
+        messageDiv.style.marginTop = '10px';
+        messageDiv.style.padding = '8px';
+        messageDiv.style.borderRadius = '4px';
+        summaryContainer.appendChild(messageDiv);
+    }
+    
+    if (messageDiv) {
+        // Check if total exceeds 100%
+        if (totalPercentage > 100) {
+            // Error styling
+            messageDiv.className = 'text-danger';
+            messageDiv.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+            messageDiv.textContent = `Total percentage (${totalPercentage.toFixed(2)}%) exceeds 100%. Please adjust the values.`;
+            
+            // Highlight the total in red
+            const totalElement = document.getElementById('totalApplicantPercentage');
+            if (totalElement) {
+                totalElement.classList.add('text-danger', 'fw-bold');
+            }
+            return false;
+        } else if (totalPercentage === 100) {
+            // Perfect 100% - success styling
+            messageDiv.className = 'text-success';
+            messageDiv.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+            messageDiv.textContent = `Perfect! Total allocation is exactly 100%.`;
+            
+            // Remove highlight
+            const totalElement = document.getElementById('totalApplicantPercentage');
+            if (totalElement) {
+                totalElement.classList.remove('text-danger', 'fw-bold');
+            }
+            return true;
+        } else {
+            // Under 100% - info styling
+            messageDiv.className = 'text-info';
+            messageDiv.style.backgroundColor = 'rgba(23, 162, 184, 0.1)';
+            messageDiv.textContent = `Current allocation: ${totalPercentage.toFixed(2)}% (${(100-totalPercentage).toFixed(2)}% remaining)`;
+            
+            // Remove highlight
+            const totalElement = document.getElementById('totalApplicantPercentage');
+            if (totalElement) {
+                totalElement.classList.remove('text-danger', 'fw-bold');
+            }
+            return true;
+        }
+    }
+    
+    return totalPercentage <= 100;
+}
+
+function initPercentageInputListeners() {
+    // Primary applicant percentage input
+    const primaryInput = document.getElementById('coApplicanRentPrimaryAmount');
+    if (primaryInput) {
+        primaryInput.addEventListener('input', function() {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^\d.]/g, '');
+            // Update validation in real-time
+            validateTotalPercentageAllocation();
+        });
+    }
+    
+    // Add listeners to existing co-applicant inputs
+    document.querySelectorAll('input[name="coApplicantamount[]"]').forEach(input => {
+        input.addEventListener('input', function() {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/[^\d.]/g, '');
+            // Update validation in real-time
+            validateTotalPercentageAllocation();
+        });
+    });
+}
+
+// Call this function when document is ready
+document.addEventListener('DOMContentLoaded', initPercentageInputListeners);
 
 function validateTotalApplicantPercentage() {
     const primaryInput = document.getElementById('coApplicanRentPrimaryAmount');
@@ -2222,6 +2990,7 @@ document.addEventListener('DOMContentLoaded', function () {
         primaryInput.addEventListener('input', function () {
             this.value = this.value.replace(/[^\d.]/g, '');
             validateApplicantPercentageInput(this);
+            validateTotalPercentageAllocation();
         });
     }
 
@@ -2229,6 +2998,7 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('input', function () {
             this.value = this.value.replace(/[^\d.]/g, '');
             validateApplicantPercentageInput(this);
+            validateTotalPercentageAllocation();
         });
     });
 });
@@ -2623,15 +3393,90 @@ function saveData(formData) {
                                 setTimeout(() => {
                                     overlay.style.display = "none";
                                     Swal.fire({
-                                        text: "Registration successful",
-                                        icon: "success",
-                                        buttonsStyling: false,
-                                        timer: 1000,
-                                        confirmButtonText: "Ok, got it!",
+                                        title: "Registration Successful!",
+                                        html: `
+                                            <div class="text-center mb-4">
+                                                <div class="success-icon-container mx-auto mb-4" style="width: 80px; height: 80px; background-color: rgba(76, 175, 80, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-check-circle" style="font-size: 40px; color: #4CAF50;"></i>
+                                                </div>
+                                                <h4 class="fs-5 fw-bold mb-4">Thank you for registering with our service.</h4>
+                                                <p class="text-muted mb-4">Your information has been submitted successfully.</p>
+                                            </div>
+                                            
+                                            <div class="bg-light p-4 rounded-3 mb-4">
+                                                <p class="fw-bold">Our team will review your application within the next 24-48 hours.</p>
+                                            </div>
+                                            
+                                            <div class="text-start mb-4">
+                                                <h5 class="fw-bold mb-3">What happens next:</h5>
+                                                <ul class="list-unstyled">
+                                                    <li class="d-flex align-items-start mb-2">
+                                                        <i class="fas fa-circle me-2 mt-1" style="font-size: 8px;"></i>
+                                                        <span>You will receive a confirmation email shortly</span>
+                                                    </li>
+                                                    <li class="d-flex align-items-start mb-2">
+                                                        <i class="fas fa-circle me-2 mt-1" style="font-size: 8px;"></i>
+                                                        <span>Once your account is approved or denied, we will notify you via email</span>
+                                                    </li>
+                                                    <li class="d-flex align-items-start mb-2">
+                                                        <i class="fas fa-circle me-2 mt-1" style="font-size: 8px;"></i>
+                                                        <span>If approved, you can start using our services immediately</span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div class="alert alert-success d-flex align-items-center">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                <span>If you don't see our email, please check your spam folder.</span>
+                                            </div>
+                                        `,
+                                        showConfirmButton: true,
+                                        showCloseButton: false,
+                                        confirmButtonText: "Go to Login Page",
+                                        width: '550px',
+                                        padding: '2rem',
                                         customClass: {
-                                            confirmButton: "btn btn-success",
+                                            container: 'registration-success-container',
+                                            popup: 'rounded-4 shadow-lg border-0',
+                                            title: 'd-none', // Hide the default title since we're using our own
+                                            htmlContainer: 'p-0 m-0',
+                                            confirmButton: 'btn btn-primary btn-lg px-5 py-2 fw-bold',
+                                            closeButton: 'position-absolute end-0 top-0 p-3'
                                         },
-                                    });
+                                        buttonsStyling: false,
+                                        focusConfirm: true,
+                                        didOpen: () => {
+                                            // Ensure the styling is applied properly by adding it directly to the document
+                                            const styleEl = document.createElement('style');
+                                            styleEl.id = 'swal-custom-style';
+                                            styleEl.innerHTML = `
+                                                .swal2-container .swal2-html-container {
+                                                    max-height: 500px !important;
+                                                    overflow: auto !important;
+                                                }
+                                            `;
+                                            document.head.appendChild(styleEl);
+                                        },
+                                        willClose: () => {
+                                            // Clean up by removing the style element when modal closes
+                                            const styleEl = document.getElementById('swal-custom-style');
+                                            if (styleEl) {
+                                                styleEl.remove();
+                                            }
+                                        }}).then((result) => {
+                                            if (result.isConfirmed) {
+                                                // Clear form data
+                                                document.querySelectorAll('form').forEach(form => form.reset());
+                                                
+                                                // Clear session/local storage
+                                                sessionStorage.clear();
+                                                localStorage.removeItem('verifiedEmail');
+                                                localStorage.removeItem('phoneVerified');
+                                                
+                                                // Redirect to login page
+                                                window.location.href = '/auth/sign-in';
+                                            }
+                                        });
                                 }, 2000);
                             } else {
                                 Swal.fire({
@@ -2777,3 +3622,101 @@ function animateProgressBar() {
 //     //     // If not confirmed, do nothing (stay on the page)
 //     // });
 // });
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add test button for success modal (for development only)
+    const testBtn = document.getElementById('testSuccessModal');
+    if (testBtn) {
+        // Make the button visible during development
+        testBtn.classList.remove('d-none');
+        
+        testBtn.addEventListener('click', function() {
+            Swal.fire({
+                title: "Registration Successful!",
+                html: `
+                    <div class="text-center mb-4">
+                        <div class="success-icon-container mx-auto mb-4" style="width: 80px; height: 80px; background-color: rgba(76, 175, 80, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-check-circle" style="font-size: 40px; color: #4CAF50;"></i>
+                        </div>
+                        <h4 class="fs-5 fw-bold mb-4">Thank you for registering with our service.</h4>
+                        <p class="text-muted mb-4">Your information has been submitted successfully.</p>
+                    </div>
+                    
+                    <div class="bg-light p-4 rounded-3 mb-4">
+                        <p class="fw-bold">Our team will review your application within the next 24-48 hours.</p>
+                    </div>
+                    
+                    <div class="text-start mb-4">
+                        <h5 class="fw-bold mb-3">What happens next:</h5>
+                        <ul class="list-unstyled">
+                            <li class="d-flex align-items-start mb-2">
+                                <i class="fas fa-circle me-2 mt-1" style="font-size: 8px;"></i>
+                                <span>You will receive a confirmation email shortly</span>
+                            </li>
+                            <li class="d-flex align-items-start mb-2">
+                                <i class="fas fa-circle me-2 mt-1" style="font-size: 8px;"></i>
+                                <span>Once your account is approved or denied, we will notify you via email</span>
+                            </li>
+                            <li class="d-flex align-items-start mb-2">
+                                <i class="fas fa-circle me-2 mt-1" style="font-size: 8px;"></i>
+                                <span>If approved, you can start using our services immediately</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-success d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span>If you don't see our email, please check your spam folder.</span>
+                    </div>
+                `,
+                showConfirmButton: true,
+                showCloseButton: false,
+                confirmButtonText: "Go to Login Page",
+                width: '550px',
+                padding: '2rem',
+                customClass: {
+                    container: 'registration-success-container',
+                    popup: 'rounded-4 shadow-lg border-0',
+                    title: 'd-none', // Hide the default title since we're using our own
+                    htmlContainer: 'p-0 m-0',
+                    confirmButton: 'btn btn-primary btn-lg px-5 py-2 fw-bold',
+                    closeButton: 'position-absolute end-0 top-0 p-3'
+                },
+                buttonsStyling: false,
+                focusConfirm: true,
+                didOpen: () => {
+                    // Ensure the styling is applied properly by adding it directly to the document
+                    const styleEl = document.createElement('style');
+                    styleEl.id = 'swal-custom-style';
+                    styleEl.innerHTML = `
+                        .swal2-container .swal2-html-container {
+                            max-height: 500px !important;
+                            overflow: auto !important;
+                        }
+                    `;
+                    document.head.appendChild(styleEl);
+                },
+                willClose: () => {
+                    // Clean up by removing the style element when modal closes
+                    const styleEl = document.getElementById('swal-custom-style');
+                    if (styleEl) {
+                        styleEl.remove();
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // For testing, just show an alert instead of redirecting
+                    alert('This would normally redirect to the login page and clear form data');
+                    
+                    // In production, this would be:
+                    // document.querySelectorAll('form').forEach(form => form.reset());
+                    // sessionStorage.clear();
+                    // localStorage.removeItem('verifiedEmail');
+                    // localStorage.removeItem('phoneVerified');
+                    // window.location.href = '/login';
+                }
+            });
+        });
+    }
+});

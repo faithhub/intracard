@@ -13,6 +13,7 @@ class BroadcastServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register broadcasting routes
+        // Broadcast::routes(); 
         Broadcast::routes();
 
         // Load channel definitions from the channels.php file

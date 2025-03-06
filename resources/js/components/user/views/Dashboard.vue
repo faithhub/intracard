@@ -21,10 +21,15 @@
 
                             <!-- Legend -->
                             <div class="legend mb-4">
-                                <v-chip color="purple" class="ma-1">Payment Duration</v-chip>
+                                <!-- <v-chip color="purple" class="ma-1">Payment Duration</v-chip>
                                 <v-chip color="amber" class="ma-1">Bills Payment</v-chip>
                                 <v-chip color="green" class="ma-1">Last Payments</v-chip>
-                                <v-chip color="blue" class="ma-1">Upcoming Payments</v-chip>
+                                <v-chip color="blue" class="ma-1">Upcoming Payments</v-chip> -->
+                                <v-chip color="purple" class="ma-1">Payment</v-chip>
+                                <v-chip color="amber" class="ma-1">Bills Payment</v-chip>
+                                <v-chip color="amber" class="ma-1">Upcoming Reminder</v-chip>
+                                <v-chip color="green" class="ma-1">Completed Reminder</v-chip>
+                                <v-chip color="grey" class="ma-1">Past Reminder</v-chip>
                             </div>
 
                             <!-- FullCalendar -->
@@ -40,9 +45,11 @@
                                         <div class="modal-header bg-gradient border-0"
                                             style="background: linear-gradient(to right, #3B82F6, #2563EB)">
                                             <h5 class="modal-title text-black d-flex align-items-center">
-                                                <i class="fas fa-calendar-check me-2"></i>
+                                                <i
+                                                    :class="['fas', selectedEvent?.is_reminder ? 'fa-bell me-2' : 'fa-calendar-check me-2']"></i>
                                                 {{ selectedEvent?.payment_type === 'bill' ? selectedEvent.bill_type :
-                                                    capitalizeFirstLetter(selectedEvent?.payment_type) }} Payment
+                                                    capitalizeFirstLetter(selectedEvent?.payment_type) }}
+                                                {{ selectedEvent?.is_reminder ? 'Reminder' : 'Payment' }}
                                             </h5>
                                             <button type="button" class="btn-close btn-close-black"
                                                 @click="toggleEventModal"></button>
@@ -50,12 +57,23 @@
 
                                         <!-- Modal Body -->
                                         <div class="modal-body p-4">
+                                            <!-- Common Information -->
+                                            <div class="mb-3 d-flex align-items-center">
+                                                <i class="fas fa-info-circle me-3 text-success fs-5"></i>
+                                                <div>
+                                                    <span class="fw-medium">Type: </span>
+                                                    <strong>{{ selectedEvent?.payment_type === 'bill' ?
+                                                        selectedEvent.bill_type :
+                                                        capitalizeFirstLetter(selectedEvent?.payment_type) }}</strong>
+                                                </div>
+                                            </div>
                                             <!-- Payment Date -->
                                             <div class="mb-3 d-flex align-items-center">
                                                 <i class="fas fa-calendar-day me-3 text-success fs-5"></i>
                                                 <div>
                                                     <span class="fw-medium">Payment Date: </span>
-                                                    <strong>{{ formatDate(selectedEvent?.payment_date) }}</strong>
+                                                    <strong>{{ formatDate(selectedEvent?.specific_payment_date ||
+                                                        selectedEvent?.payment_date) }}</strong>
                                                 </div>
                                             </div>
 
@@ -81,6 +99,47 @@
                                                     </span>
                                                 </div>
                                             </div>
+
+                                            <!-- Reminder-specific information -->
+                                            <template v-if="selectedEvent?.is_reminder">
+                                                <div class="mb-3 d-flex align-items-center">
+                                                    <i class="fas fa-bell me-3 text-warning fs-5"></i>
+                                                    <div>
+                                                        <span class="fw-medium">Reminder Date: </span>
+                                                        <strong>{{ formatDate(selectedEvent?.reminder_date) }}</strong>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3 d-flex align-items-center">
+                                                    <i class="fas fa-tag me-3 text-info fs-5"></i>
+                                                    <div>
+                                                        <span class="fw-medium">Reminder Type: </span>
+                                                        <strong>{{ formatReminderType(selectedEvent?.reminder_type)
+                                                        }}</strong>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3 d-flex align-items-center">
+                                                    <i :class="[
+                                                        'fas',
+                                                        'me-3',
+                                                        'fs-5',
+                                                        selectedEvent?.reminder_status === 'completed' ? 'fa-check-circle text-success' :
+                                                            selectedEvent?.reminder_status === 'sent' ? 'fa-paper-plane text-info' :
+                                                                'fa-clock text-warning'
+                                                    ]"></i>
+                                                    <div>
+                                                        <span class="fw-medium">Reminder Status: </span>
+                                                        <span :class="[
+                                                            'badge',
+                                                            selectedEvent?.reminder_status === 'completed' ? 'bg-success' :
+                                                                selectedEvent?.reminder_status === 'sent' ? 'bg-info' : 'bg-warning'
+                                                        ]">
+                                                            {{ capitalizeFirstLetter(selectedEvent?.reminder_status) }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </template>
 
                                             <!-- Team Member View (For Mortgage/Rent) -->
                                             <template
@@ -196,21 +255,38 @@
                                             </template>
 
                                             <!-- Reminder Message -->
-                                            <div class="alert alert-info mt-4 mb-0">
+                                            <!-- Alert section with conditional rendering -->
+                                            <div v-if="!selectedEvent?.is_reminder" class="alert alert-info mt-4 mb-0">
                                                 <p class="mb-2">
                                                     Your {{ selectedEvent?.payment_type === 'bill' ?
                                                         selectedEvent.bill_type.toLowerCase() :
-                                                        selectedEvent?.payment_type?.toLowerCase() }} payment is due on
-                                                    <strong>{{ formatDate(selectedEvent?.payment_date) }}</strong>.
+                                                    selectedEvent?.payment_type?.toLowerCase() }} payment is due on
+                                                    <strong>{{ formatDate(selectedEvent?.specific_payment_date ||
+                                                        selectedEvent?.payment_date) }}</strong>.
                                                 </p>
-                                                <p class="mb-2">
+                                                <p class="mb-2" v-if="hasUpcomingReminders">
                                                     We will send reminders on the following dates:<br>
-                                                    <strong>{{ formatReminderDates(selectedEvent?.reminder_dates)
-                                                        }}</strong>
+                                                    <strong>{{ getUpcomingReminderDates() }}</strong>
                                                 </p>
                                                 <p class="mb-0">
                                                     Kindly ensure your card or wallet is funded to avoid any
                                                     disruptions.
+                                                </p>
+                                            </div>
+
+                                            <!-- Reminder-specific alert that doesn't show for past/completed reminders -->
+                                            <div v-else-if="shouldShowReminderAlert"
+                                                class="alert alert-warning mt-4 mb-0">
+                                                <p class="mb-2">
+                                                    <strong>This is a reminder:</strong> Your {{
+                                                        selectedEvent?.payment_type === 'bill' ?
+                                                    selectedEvent.bill_type.toLowerCase() :
+                                                    selectedEvent?.payment_type?.toLowerCase() }} payment is due on
+                                                    <strong>{{ formatDate(selectedEvent?.specific_payment_date)
+                                                        }}</strong>.
+                                                </p>
+                                                <p class="mb-0">
+                                                    Please ensure your card or wallet is funded before this date.
                                                 </p>
                                             </div>
                                         </div>
@@ -716,35 +792,139 @@ export default {
         };
     },
     methods: {
+        // Format only upcoming reminder dates
+        getUpcomingReminderDates() {
+            if (!this.selectedEvent?.payment_dates) return "";
+
+            const now = new Date();
+            const paymentDate = this.selectedEvent.specific_payment_date || this.selectedEvent.payment_date;
+            const upcomingDates = [];
+
+            // Get reminders for this specific payment date
+            if (this.selectedEvent.payment_dates[paymentDate]) {
+                const reminderTypes = this.selectedEvent.payment_dates[paymentDate];
+
+                for (const type in reminderTypes) {
+                    const reminderDetails = reminderTypes[type];
+                    const reminderDate = new Date(reminderDetails.reminder_date);
+
+                    // Only include future pending reminders
+                    if (reminderDate >= now && reminderDetails.status === 'pending') {
+                        upcomingDates.push(this.formatDate(reminderDetails.reminder_date));
+                    }
+                }
+            }
+
+            return upcomingDates.join(", ") || "No upcoming reminders";
+        },
+        formatReminderType(type) {
+            if (!type) return "";
+
+            // Transform reminder types like "7_days_before" to "7 Days Before"
+            return type.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        },
         getProviderName(providerId) {
             const provider = this.providers.find(p => p.value === providerId);
             return provider ? provider.name : providerId;
         },
         async fetchEvents(info, successCallback, failureCallback) {
-            // console.log('info:', info);
-            // console.log('successCallback:', successCallback);
-            // console.log('failureCallback:', failureCallback);
-
             try {
                 const response = await axios.get('/api/payment-schedules');
-                const events = response.data.map(schedule => ({
-                    id: schedule.id,
-                    title: schedule.payment_type === 'bill' && schedule.bill_type ?
-                        `${schedule.bill_type}` : `${schedule.payment_type.toUpperCase()}`,
-                    start: schedule.payment_date,
-                    color: schedule.payment_type === 'bill' ? '#FCD34D' : 'purple',
-                    extendedProps: schedule,
-                }));
+                const events = [];
+                const now = new Date();
+
+                // Process each schedule
+                response.data.forEach(schedule => {
+                    // Add payment events from payment_dates
+                    if (schedule.payment_dates) {
+                        Object.keys(schedule.payment_dates).forEach(paymentDate => {
+                            // Add main payment event on the actual payment date
+                            events.push({
+                                id: `payment_${schedule.id}_${paymentDate}`,
+                                title: schedule.payment_type === 'bill' && schedule.bill_type
+                                    ? `${schedule.bill_type}`
+                                    : `${schedule.payment_type.toUpperCase()}`,
+                                start: paymentDate,
+                                // color: schedule.payment_type === 'bill' ? '#FCD34D' : 'purple',
+                                color: schedule.payment_type === 'bill' ? 'purple' : 'purple',
+                                extendedProps: {
+                                    ...schedule,
+                                    specific_payment_date: paymentDate,
+                                    is_payment: true
+                                },
+                                className: 'payment-event'
+                            });
+
+                            // Add reminder events for this payment date
+                            const reminderTypes = schedule.payment_dates[paymentDate];
+                            Object.entries(reminderTypes).forEach(([reminderType, reminderDetails]) => {
+                                const reminderDate = new Date(reminderDetails.reminder_date);
+                                const isPastDate = reminderDate < now;
+
+                                // Determine color based on status and date
+                                let reminderColor;
+                                if (isPastDate) {
+                                    if (reminderDetails.status === 'completed') {
+                                        reminderColor = '#4CAF50'; // Green for completed
+                                    } else if (reminderDetails.status === 'sent') {
+                                        reminderColor = '#4CAF50'; // Green for sent
+                                    } else {
+                                        reminderColor = '#9E9E9E'; // Grey for past pending
+                                    }
+                                } else {
+                                    reminderColor = '#FCD34D'; // Yellow for future pending
+                                }
+
+                                // Only add if reminder is pending or it's not in the past
+                                if (!isPastDate || reminderDetails.status !== 'pending') {
+                                    events.push({
+                                        id: `reminder_${schedule.id}_${reminderType}_${paymentDate}`,
+                                        title:  schedule.payment_type === 'bill' && schedule.bill_type
+                                    ? `${schedule.bill_type} Reminder`
+                                    : `${schedule.payment_type.toUpperCase()} Reminder`,
+                                        start: reminderDetails.reminder_date,
+                                        color: reminderColor,
+                                        extendedProps: {
+                                            originalEvent: schedule,
+                                            reminderType: reminderType,
+                                            reminderDetails: reminderDetails,
+                                            isReminder: true,
+                                            specific_payment_date: paymentDate
+                                        },
+                                        className: 'reminder-event'
+                                    });
+                                }
+                            });
+                        });
+                    } else if (schedule.payment_date) {
+                        // Fallback for schedules without payment_dates
+                        events.push({
+                            id: schedule.id,
+                            title: schedule.payment_type === 'bill' && schedule.bill_type
+                                ? `${schedule.bill_type}`
+                                : `${schedule.payment_type.toUpperCase()}`,
+                            start: schedule.payment_date,
+                            color: schedule.payment_type === 'bill' ? '#FCD34D' : 'purple',
+                            extendedProps: {
+                                ...schedule,
+                                is_payment: true
+                            },
+                            className: 'payment-event'
+                        });
+                    }
+                });
 
                 if (typeof successCallback === 'function') {
-                    successCallback(events); // Call the callback with the events
+                    successCallback(events);
                 } else {
                     console.error('successCallback is not a function');
                 }
             } catch (error) {
                 console.error('Error fetching events:', error);
                 if (typeof failureCallback === 'function') {
-                    failureCallback(error); // Call the error callback
+                    failureCallback(error);
                 }
             }
         },
@@ -1107,10 +1287,38 @@ export default {
                 .join(", ");
         },
         // Handle event click to open modal
-        handleEventClick(info) {
+        handleEventClickOld(info) {
             // console.log("Event clicked:", info.event.extendedProps); // Debug log
             this.selectedEvent = info.event.extendedProps; // Get event details
             this.isEventModalOpen = true; // Show modal
+        },
+        handleEventClick(info) {
+            const eventData = info.event.extendedProps;
+
+            if (eventData.isReminder) {
+                // For reminder events
+                const paymentDate = eventData.specific_payment_date;
+                const reminderData = {
+                    ...eventData.originalEvent,
+                    is_reminder: true,
+                    reminder_type: eventData.reminderType,
+                    reminder_date: eventData.reminderDetails.reminder_date,
+                    reminder_status: eventData.reminderDetails.status,
+                    payment_status: eventData.reminderDetails.payment_status,
+                    specific_payment_date: paymentDate
+                };
+                this.selectedEvent = reminderData;
+            } else {
+                // For payment events
+                const specificPaymentDate = eventData.specific_payment_date || eventData.payment_date;
+                this.selectedEvent = {
+                    ...eventData,
+                    specific_payment_date: specificPaymentDate,
+                    is_payment: true
+                };
+            }
+
+            this.isEventModalOpen = true;
         },
         // Toggle modal visibility
         toggleEventModal() {
@@ -1140,6 +1348,45 @@ export default {
         creditScore() {
             return this.scores[this.creditAgency];
         },
+        // Check if we should show the reminder alert
+        shouldShowReminderAlert() {
+            if (!this.selectedEvent?.is_reminder) return false;
+
+            // Don't show for reminders that have status 'completed' or 'sent'
+            if (['completed', 'sent'].includes(this.selectedEvent.reminder_status)) {
+                return false;
+            }
+
+            // Don't show for reminders that have passed
+            const reminderDate = new Date(this.selectedEvent.reminder_date);
+            const now = new Date();
+            if (reminderDate < now) {
+                return false;
+            }
+
+            return true;
+        },
+
+        // Check if there are any upcoming reminders to show
+        hasUpcomingReminders() {
+            if (!this.selectedEvent?.payment_dates) return false;
+
+            const now = new Date();
+            const paymentDate = this.selectedEvent.specific_payment_date || this.selectedEvent.payment_date;
+
+            // Check if there are any upcoming reminders for this payment date
+            if (this.selectedEvent.payment_dates[paymentDate]) {
+                const reminderTypes = this.selectedEvent.payment_dates[paymentDate];
+                for (const type in reminderTypes) {
+                    const reminderDate = new Date(reminderTypes[type].reminder_date);
+                    if (reminderDate >= now && reminderTypes[type].status === 'pending') {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
     },
     async mounted() {
         // this.fetchEvents();

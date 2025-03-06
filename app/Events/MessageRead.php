@@ -17,6 +17,8 @@ class MessageRead implements ShouldBroadcastNow
 
     public $messageIds;
     public $conversationId;
+    public $ticketUuid;
+    public $userId;
 
     /**
      * Create a new event instance.
@@ -24,10 +26,12 @@ class MessageRead implements ShouldBroadcastNow
      * @param array $messageIds
      * @param int $conversationId
      */
-    public function __construct(array $messageIds, $conversationId)
+    public function __construct(array $messageIds, string $ticketUuid, int $userId)
     {
         $this->messageIds = $messageIds;
-        $this->conversationId = $conversationId;
+        // $this->conversationId = $conversationId;
+        $this->ticketUuid = $ticketUuid;
+        $this->userId = $userId;
     }
 
     /**
@@ -38,7 +42,10 @@ class MessageRead implements ShouldBroadcastNow
     public function broadcastOn()
     {
         // Broadcast to the specific conversation channel
-        return new Channel('conversation.' . $this->conversationId);
+        // return new Channel('conversation.' . $this->conversationId);
+
+        // Broadcast to the specific ticket channel
+        return new Channel('ticket.' . $this->ticketUuid);
     }
 
     /**
@@ -50,7 +57,10 @@ class MessageRead implements ShouldBroadcastNow
     {
         return [
             'message_ids' => $this->messageIds,
-            'conversation_id' => $this->conversationId,
+            // 'conversation_id' => $this->conversationId,
+            'ticket_uuid' => $this->ticketUuid,
+            'user_id' => $this->userId,
+            'timestamp' => now()->toDateTimeString(),
         ];
     }
 }

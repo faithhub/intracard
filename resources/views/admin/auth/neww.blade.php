@@ -2726,6 +2726,55 @@ $mapboxToken = getenv('MAPBOX_ACCESS_TOKEN');
                                                 box.
                                             </div>
                                             <!--end::Notice-->
+
+                                            <div class="mt-5">
+                                                <form id="verification-form">
+                                                    <div class="row mb-4">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">ID Number</label>
+                                                            <input type="text" class="form-control" name="idNumber" value="123456789" readonly>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Document Number</label>
+                                                            <input type="text" class="form-control" name="number" value="B01234567" readonly>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-4">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Document Type</label>
+                                                            <input type="text" class="form-control" name="type" value="PASSPORT" readonly>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Country</label>
+                                                            <input type="text" class="form-control" name="country" value="EE" readonly>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-4">
+                                                        <div class="col-12">
+                                                            <label class="form-label">Full Address</label>
+                                                            <input type="text" class="form-control" name="fullAddress" value="Lorem Ipsum 30, 13612 Tallinn, Estonia" readonly>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Terms Agreement Checkbox -->
+                                                    <div class="fv-row mb-5 fv-plugins-icon-container">
+                                                        <label class="form-check form-check-custom form-check-solid form-check-inline">
+                                                            <input class="form-check-input" type="checkbox" name="terms" id="agreeCheckbox" value="1">
+                                                            <span class="form-check-label fw-semibold text-gray-700 fs-6">
+                                                                I Agree to the <a href="#" class="text-primary">Terms and conditions</a>
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                    
+                                                    <!-- Button -->
+                                                    <div class="d-flex">
+                                                        <button type="button" id="proceedButton" class="btn btn-lg btn-primary">
+                                                            Proceed with verification
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                            
                                             <!-- Terms and Conditions Container -->
                                             <div id="termsContainer" class="mt-10">
                                                 <h3>Terms and Conditions</h3>

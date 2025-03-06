@@ -23,16 +23,30 @@ class PaymentFailedNotification extends Notification
         return ['mail'];
     }
 
+    // public function toMail($notifiable)
+    // {
+    //     return (new MailMessage)
+    //         ->subject('Payment Failed Notification')
+    //         ->greeting("Hello {$notifiable->name},")
+    //         ->line("We were unable to process your {$this->payment->payment_type} payment due on {$this->payment->payment_date}.")
+    //         ->line("Please ensure your card or wallet is funded and try again.")
+    //         ->action('Update Payment Method', url('/payment-method'))
+    //         ->line('Thank you for using our service!');
+    // }
+
     public function toMail($notifiable)
-    {
-        return (new MailMessage)
-            ->subject('Payment Failed Notification')
-            ->greeting("Hello {$notifiable->name},")
-            ->line("We were unable to process your {$this->payment->payment_type} payment due on {$this->payment->payment_date}.")
-            ->line("Please ensure your card or wallet is funded and try again.")
-            ->action('Update Payment Method', url('/payment-method'))
-            ->line('Thank you for using our service!');
-    }
+{
+    $paymentType = $this->payment->payment_type ?? ($this->payment->payment_for ?? 'scheduled');
+    $dueDate = $this->payment->payment_date ?? ($this->payment->due_date ?? 'upcoming');
+    
+    return (new MailMessage)
+        ->subject('Payment Failed Notification')
+        ->greeting("Hello {$notifiable->name},")
+        ->line("We were unable to process your {$paymentType} payment due on {$dueDate}.")
+        ->line("Please ensure your card or wallet is funded and try again.")
+        ->action('Update Payment Method', url('/payment-method'))
+        ->line('Thank you for using our service!');
+}
 
     /**
      * Get the array representation of the notification.

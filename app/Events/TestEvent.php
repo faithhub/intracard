@@ -3,12 +3,14 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // Change this
+use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TestEvent implements ShouldBroadcast
+class TestEvent implements ShouldBroadcastNow // Change this
 {
-    use SerializesModels;
+    use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $message;
 
@@ -19,11 +21,6 @@ class TestEvent implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new Channel('test-channel'); // Public channel
-    }
-
-    public function broadcastWith()
-    {
-        return ['message' => $this->message];
+        return new Channel('test-channel');
     }
 }

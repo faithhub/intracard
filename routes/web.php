@@ -1,8 +1,8 @@
 <?php
 
-use App\Events\TestEvent;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\AdminSupportController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\AutoReplyController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -23,10 +23,11 @@ use App\Http\Controllers\User\AccountController;
 use App\Http\Controllers\User\BillingController;
 use App\Http\Controllers\User\DashboardController;
 use App\Http\Controllers\User\TeamMemberController;
+use App\Http\Controllers\VeriffController;
 use App\Http\Controllers\VerificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Broadcast;
 // Route::get('/', function () {
 //     return view('welcome');
 // });
@@ -46,15 +47,24 @@ Route::get('/csrf-token', function () {
     ]);
 });
 
+Route::get('/refresh-csrf', function() {
+    return response()->json(['token' => csrf_token()]);
+});
+
 Route::get('/team-invitation-accept', function () {
     return Response::json([
         'csrfToken' => csrf_token(),
     ]);
-})->name('team.invitation.accept');
+})->name('team.invitation.accept2');
 
-Route::get('/broadcast', function () {
-    broadcast(new TestEvent('Hello from Reverb!'));
-    return 'Event broadcasted!';
+Route::post('/broadcasting/auth', function (Illuminate\Http\Request $request) {
+    $auth = Broadcast::auth($request);
+    return $auth;
+});
+
+//Keep the session alive
+Route::middleware('auth:sanctum')->get('/api/keep-alive', function () {
+    return response()->json(['status' => 'active']);
 });
 
 // Route::get('/', function () {
@@ -69,10 +79,26 @@ Route::get('/sanctum/csrf-cookie', function () {
     return response()->json(['message' => 'CSRF cookie set']);
 });
 
+// Route::get('/test-broadcast', function () {
+//     broadcast(new App\Events\TestEvent('This is a test message'));
+//     return response()->json(['message' => 'Test event broadcasted!']);
+// });
+
+Route::post('/broadcasting/auth', function (Request $request) {
+    return Broadcast::auth($request);
+
+});
+
 Route::get('app/settings', [SettingsController::class, 'all_settings']);
 Route::get('auth/active-user', [SettingsController::class, 'get_active_user']);
 
 Route::get('/auth/status', [LoginController::class, 'status']);
+
+Route::get('/plaid-verify-account', [VerificationController::class, 'verifyAccount'])->name('plaid-verify-account');
+
+Route::post('/veriff/start', [VeriffController::class, 'createSession']);
+Route::post('/veriff/callback', [VeriffController::class, 'handleCallback']);
+Route::post('/veriff/status', [VeriffController::class, 'checkSessionDecision']);
 
 Route::prefix('auth')->middleware('guest')->group(function () {
 
@@ -90,7 +116,6 @@ Route::prefix('auth')->middleware('guest')->group(function () {
     Route::post('/verify-phone-verification-code', [RegisterController::class, 'verifyPhoneCode'])->name('verify-phone-verification-code');
     Route::post('/send-phone-verification-code', [RegisterController::class, 'sendPhoneVerificationCode'])->name('send-phone-verification-code');
     //Verify account
-    Route::post('/plaid-verify-account', [VerificationController::class, 'verifyAccount'])->name('plaid-verify-account');
     // Sign In routes
     // Route::get('/sign-in', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/sign-in', [LoginController::class, 'login'])->name('login-user');
@@ -174,15 +199,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 // User Notifications Routes
-Route::prefix('notifications')->middleware(['auth:sanctum'])->group(function () {
-    Route::get('/', [NotificationController::class, 'index'])->name('notifications.index'); // New index route
-    Route::get('/', [NotificationController::class, 'fetch'])->name('notifications.fetch');
-    Route::post('/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
-    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-    Route::post('/archive', [NotificationController::class, 'archive'])->name('notifications.archive');
-    Route::get('/search', [NotificationController::class, 'search'])->name('notifications.search');
-    Route::delete('/delete', [NotificationController::class, 'delete'])->name('notifications.delete');
-});
+// Route::prefix('notifications')->as('admin.')->middleware(['auth:sanctum'])->group(function () {
+//     Route::get('/', [NotificationController::class, 'index'])->name('notifications.index'); // New index route
+//     Route::get('/', [NotificationController::class, 'fetch'])->name('notifications.fetch');
+//     Route::post('/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+//     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+//     Route::post('/archive', [NotificationController::class, 'archive'])->name('notifications.archive');
+//     Route::get('/search', [NotificationController::class, 'search'])->name('notifications.search');
+//     Route::delete('/delete', [NotificationController::class, 'delete'])->name('notifications.delete');
+// });
 
 // Admin Notifications Routes
 Route::prefix('admin/notifications')->middleware(['auth:admin'])->group(function () {
@@ -206,16 +231,22 @@ Route::prefix('admin')
         // Add registration routes here if needed
     });
 
-    Route::prefix('admin')
+Route::prefix('admin')
     ->middleware(['admin.auth'])
     ->as('admin.')
     ->group(function () {
 
         // Common Routes (accessible by all authenticated admins)
         Route::middleware(['role:admin,support,system_admin,manager,finance,user_manager'])->group(function () {
+            Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
             Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
             Route::get('/profile', [AdminDashboardController::class, 'profile'])->name('profile');
             Route::post('/logout', [AuthController::class, 'logout'])->name('logout-admin');
+
+                // Profile routes
+                Route::get('/profile', [AdminDashboardController::class, 'profile'])->name('profile');
+                Route::put('/profile/update', [AdminDashboardController::class, 'updateProfile'])->name('profile.update');
+                Route::put('/profile/password', [AdminDashboardController::class, 'updatePassword'])->name('password.update');
         });
 
         // System Admin Routes
@@ -230,8 +261,22 @@ Route::prefix('admin')
             Route::delete('/admin-users/{id}', [AdminController::class, 'destroy'])->name('admin-users.destroy');
 
             // Settings
-            Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+            // Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
 
+             // Settings Management Routes
+             Route::prefix('settings')->name('settings.')->group(function () {
+                // Main CRUD routes
+                Route::get('/', [SettingsController::class, 'index'])->name('index');
+                Route::post('/', [SettingsController::class, 'store'])->name('store');
+                Route::post('/{id}', [SettingsController::class, 'update'])->name('update');
+                Route::delete('/{id}', [SettingsController::class, 'destroy'])->name('destroy');
+                
+                Route::get('/check-key', [SettingsController::class, 'checkKeyExists'])->name('check-key');
+                // Soft delete management routes
+                Route::get('/trashed', [SettingsController::class, 'trashed'])->name('trashed');
+                Route::get('/restore/{id}', [SettingsController::class, 'restore'])->name('restore');
+                Route::delete('/force-delete/{id}', [SettingsController::class, 'forceDelete'])->name('force-delete');
+            });
             // Auto Reply Management
             Route::resource('auto-replies', AutoReplyController::class);
 
@@ -249,12 +294,36 @@ Route::prefix('admin')
             Route::post('/users/{uuid}/approve', [UserController::class, 'approveUser'])->name('admin.users.approve');
             Route::post('/users/{uuid}/reject', [UserController::class, 'rejectUser'])->name('admin.users.reject');
             Route::delete('/users/{uuid}/delete', [UserController::class, 'deleteUser'])->name('admin.users.delete');
+            Route::get('/user/wallet/{uuid}/history', [UserController::class, 'getWalletHistory'])->name('admin.users.wallets.history');
             Route::get('/onboarding', [AdminDashboardController::class, 'onboarding'])->name('onboarding');
         });
 
         // Support & System Admin Routes
+        // Route::middleware(['role:support,system_admin'])->group(function () {
+        //     Route::get('/support', [AdminSupportController::class, 'index'])->name('support');
+        // });
+
+        // Support & System Admin Routes
         Route::middleware(['role:support,system_admin'])->group(function () {
-            Route::get('/support', [AdminDashboardController::class, 'help'])->name('support');
+            // Main support page view
+            Route::get('/support', [AdminSupportController::class, 'index'])->name('support');
+
+            // API endpoints for ticket management
+            Route::prefix('api/')->group(function () {
+                // Tickets list and details
+                Route::get('/tickets', [AdminSupportController::class, 'getTickets'])->name('admin.api.tickets');
+                Route::get('/tickets/{uuid}', [AdminSupportController::class, 'getTicket'])->name('admin.api.ticket.show');
+                Route::get('/tickets/{uuid}/messages', [AdminSupportController::class, 'getMessages'])->name('admin.api.ticket.messages');
+
+                // Actions
+                Route::post('/tickets/{uuid}/messages', [AdminSupportController::class, 'sendMessage'])->name('admin.api.ticket.send-message');
+                Route::get('/messages/{id}/download', [AdminSupportController::class, 'downloadFile'])->name('admin.api.message.download');
+                Route::put('/tickets/{uuid}/status', [AdminSupportController::class, 'updateStatus'])->name('admin.api.ticket.update-status');
+                Route::post('/tickets/{uuid}/close', [AdminSupportController::class, 'closeTicket'])->name('admin.api.ticket.close');
+
+                // Dashboard data
+                Route::get('/unread-messages', [AdminSupportController::class, 'getUnreadMessageCount'])->name('admin.api.unread-messages');
+            });
         });
 
         // Finance & System Admin Routes
@@ -396,6 +465,8 @@ Route::middleware(['checkLaravelAuth'])->group(function () {
 
     Route::post('/api/send-deactivation-email', [AccountController::class, 'sendDeactivationEmail']);
 
+    Route::post('/api/send-verification', [AccountController::class, 'sendVerificationCode']);
+
     Route::get('/api/profile', [AccountController::class, 'show']);
     Route::post('/api/profile/update', [AccountController::class, 'update']);
     Route::post('/api/profile/update', [AccountController::class, 'update']);
@@ -406,6 +477,7 @@ Route::middleware(['checkLaravelAuth'])->group(function () {
     Route::post('/payments/{paymentScheduleId}/cancel-reminders', [PaymentScheduleController::class, 'cancelReminders']);
 
 });
+
 // Serve Vue app for frontend routes
 Route::get('/{any}', function () {
     return view('app'); // Ensure 'app.blade.php' exists in your views directory
