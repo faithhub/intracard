@@ -27,10 +27,22 @@ export default defineConfig({
         // },
     },
     build: {
-        outDir: "public/build", // Output directory for production builds
+        outDir: "public/build",
+        // Add these production optimizations
+        minify: 'terser',
+        sourcemap: false,
+        chunkSizeWarningLimit: 1600,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['vue', 'vuetify'],
+                    // Other manual chunks if needed
+                }
+            }
+        },
         commonjsOptions: {
             include: [/jquery/, /jquery-confirm/],
-          },
+        },
     },
     optimizeDeps: {
       include: ['jquery', 'jquery-confirm', 'vue-toastification']
@@ -59,10 +71,17 @@ export default defineConfig({
         },
     },
     css: {
-      preprocessorOptions: {
-        scss: {
-          additionalData: `@import "@mdi/font/css/materialdesignicons.css";`
+        preprocessorOptions: {
+          scss: {
+            additionalData: ``
+          }
         }
-      }
-    }
+      },
+    // css: {
+    //   preprocessorOptions: {
+    //     scss: {
+    //       additionalData: `@import "@mdi/font/css/materialdesignicons.css";`
+    //     }
+    //   }
+    // }
 });

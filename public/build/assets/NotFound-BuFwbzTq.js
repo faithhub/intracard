@@ -1,0 +1,1 @@
+import{v as o,E as e,L as n}from"./vendor-DWrK2g1_.js";import{_ as a}from"./main-DhXQbgH3.js";const r=a({name:"NotFound"},[["render",function(a,r,t,s,d,l){return n(),o("div",null,r[0]||(r[0]=[e("h1",null,"404 - Page Not Found",-1),e("p",null,"The page you are looking for does not exist.",-1)]))}],["__scopeId","data-v-e1560659"]]);export{r as default};
