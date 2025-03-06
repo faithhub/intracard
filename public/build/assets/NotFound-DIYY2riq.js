@@ -1,0 +1,1 @@
+import{_ as t,v as n,E as e,L as a}from"./main-DHxkGDom.js";const s={name:"NotFound"};function r(d,o,l,p,u,c){return a(),n("div",null,o[0]||(o[0]=[e("h1",null,"404 - Page Not Found",-1),e("p",null,"The page you are looking for does not exist.",-1)]))}const f=t(s,[["render",r],["__scopeId","data-v-e1560659"]]);export{f as default};
